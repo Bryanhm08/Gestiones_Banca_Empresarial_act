@@ -18,7 +18,7 @@ return new class extends Migration {
 
             $table->foreign('estado_id')
                 ->references('id')
-                ->on('estado_credito')
+                ->on('estados_credito')
                 ->onDelete('cascade');
         });
 
