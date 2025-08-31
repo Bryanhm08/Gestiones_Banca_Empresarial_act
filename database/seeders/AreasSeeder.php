@@ -17,3 +17,4 @@ class AreasSeeder extends Seeder
         ]);
     }
 }
+
