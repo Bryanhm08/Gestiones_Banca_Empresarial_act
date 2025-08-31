@@ -6,6 +6,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
 
 class User extends Authenticatable
 {
@@ -43,6 +45,23 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'asesor' => 'boolean',
+            'admin' => 'boolean',
+            'estado' => 'boolean',
         ];
+    }
+
+    public function area(): BelongsTo
+    {
+        return $this->belongsTo(Area::class);
+    }
+
+    public function canAccessModule(string $slug): bool
+    {
+        if ($this->admin)
+            return true;
+        if (!$this->area)
+            return false;
+        return $this->area->hasModule($slug);
     }
 }

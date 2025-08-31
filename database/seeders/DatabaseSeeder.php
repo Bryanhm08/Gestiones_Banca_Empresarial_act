@@ -21,6 +21,7 @@ class DatabaseSeeder extends Seeder
             EstadosCreditoSeeder::class,
             TiposCuentaSeeder::class,
             AreaModulesSeeder::class,
+            AdminUsersSeeder::class,
         ]);
     }
 }
