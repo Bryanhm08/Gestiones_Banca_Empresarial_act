@@ -9,6 +9,7 @@ use App\Http\Controllers\ReporteCreditoController;
 use App\Http\Controllers\ReporteriaCuentaController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\CuentaApiController;
 use Inertia\Inertia;
 
 Route::get('/', function () {
@@ -18,6 +19,14 @@ Route::get('/', function () {
         'laravelVersion' => Application::VERSION,
         'phpVersion' => PHP_VERSION,
     ]);
+});
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/clientes', [CuentaApiController::class, 'clientes']);
+    Route::get('/tipos-cuenta', [CuentaApiController::class, 'tiposCuenta']);
+    Route::get('/asesores', [CuentaApiController::class, 'asesores']);
+    Route::get('/cuentas/recent', [CuentaApiController::class, 'recent']);
+    Route::post('/cuentas', [CuentaApiController::class, 'store'])->name('api.cuentas.store');
 });
 
 // Dashboard: todos los autenticados
