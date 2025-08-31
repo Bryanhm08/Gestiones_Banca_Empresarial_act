@@ -14,7 +14,7 @@ class CuentaApiController extends Controller
 {
     public function clientes()
     {
-        return Cliente::select('id', 'nombre')->orderBy('nombre')->get();
+        return Cliente::select('id', 'nombre_cliente')->orderBy('nombre_cliente')->get();
     }
 
     public function tiposCuenta()
@@ -34,7 +34,7 @@ public function asesores()
     {
         $v = Validator::make($request->all(), [
             'cliente_id' => ['required', 'exists:clientes,id'],
-            'tipo_cuenta_id' => ['required', 'exists:tipos_cuentas,id'],
+            'tipo_cuenta_id' => ['required', 'exists:tipos_cuenta,id'],
             'asesor_id' => ['required', 'exists:users,id'],
             'fecha_apertura' => ['required', 'date', 'before_or_equal:today'],
         ]);
@@ -54,16 +54,15 @@ public function asesores()
     }
     public function recent()
     {
-        // Si tienes relaciones definidas (cliente, tipo, asesor), puedes usarlas:
         $rows = Cuenta::query()
-            ->with(['cliente:id,nombre', 'tipo:id,nombre', 'asesor:id,name'])
+            ->with(['cliente:id,nombre_cliente', 'tipo:id,nombre', 'asesor:id,name'])
             ->latest('created_at')
             ->limit(50)
             ->get()
             ->map(function ($c) {
                 return [
                     'id' => $c->id,
-                    'cliente' => $c->cliente->nombre ?? '—',
+                    'cliente' => $c->cliente->nombre_cliente ?? '—',
                     'tipo_cuenta' => $c->tipo->nombre ?? '—',
                     'asesor' => $c->asesor->name ?? '—',
                     'fecha_apertura' => $c->fecha_apertura,

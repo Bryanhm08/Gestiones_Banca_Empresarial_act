@@ -21,14 +21,6 @@ Route::get('/', function () {
     ]);
 });
 
-Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/clientes', [CuentaApiController::class, 'clientes']);
-    Route::get('/tipos-cuenta', [CuentaApiController::class, 'tiposCuenta']);
-    Route::get('/asesores', [CuentaApiController::class, 'asesores']);
-    Route::get('/cuentas/recent', [CuentaApiController::class, 'recent']);
-    Route::post('/cuentas', [CuentaApiController::class, 'store'])->name('api.cuentas.store');
-});
-
 // Dashboard: todos los autenticados
 Route::get('/dashboard', fn() => Inertia::render('Dashboard'))
     ->middleware(['auth', 'verified'])
@@ -45,9 +37,14 @@ Route::middleware('auth')->group(function () {
 
 // Clientes (bloqueado para asesores; admin pasa)
 Route::middleware(['auth', 'no-asesor-clientes'])->group(function () {
+    Route::get('/obtener/clientes', [CuentaApiController::class, 'clientes']);
     Route::get('/clientes', [ClienteController::class, 'index'])->name('clientes.index');
-    Route::get('/clientes/create', [ClienteController::class, 'create'])->name('clientes.create'); // 👈 formulario
-    Route::post('/clientes', [ClienteController::class, 'store'])->name('clientes.store');        // 👈 guardar
+    Route::get('/asesores', [CuentaApiController::class, 'asesores']);
+    Route::get('/tipos-cuenta', [CuentaApiController::class, 'tiposCuenta']);
+    Route::get('/clientes/create', [ClienteController::class, 'create'])->name('clientes.create');
+    Route::post('/clientes', [ClienteController::class, 'store'])->name('clientes.store');
+    Route::post('/cuentas', [CuentaApiController::class, 'store'])->name('api.cuentas.store');
+    Route::get('/cuentas/recent', [CuentaApiController::class, 'recent']);
 });
 
 // Cuentas (acceso general autenticado)

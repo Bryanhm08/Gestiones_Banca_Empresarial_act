@@ -4,7 +4,6 @@ import axios from 'axios'
 import { useToast } from 'primevue/usetoast'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 
-// PrimeVue components
 import Card from 'primevue/card'
 import InputText from 'primevue/inputtext'
 import Dropdown from 'primevue/dropdown'
@@ -13,35 +12,24 @@ import InputMask from 'primevue/inputmask'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
 import Divider from 'primevue/divider'
-import Tooltip from 'primevue/tooltip'
-
-// Lucide icons
 import { User, IdCard, Mail, Phone, Calendar as CalendarIcon, Building2, UserCog, Save, RotateCcw } from 'lucide-vue-next'
-
-// Props desde el controlador
 const props = defineProps({
     categorias: { type: Array, default: () => [] },
     asesores: { type: Array, default: () => [] },
 })
-
-// Toast
 const toast = useToast()
-
-// Estado del formulario
 const form = ref({
     nombre_cliente: '',
     categoria_id: null,
     nit: '',
-    fecha_nacimiento: null, // Date object en UI → string al enviar
+    fecha_nacimiento: null,
     telefono: '',
     email: '',
     asesor_id: null,
 })
 
-const errors = ref({})        // errores 422 del backend
+const errors = ref({})
 const loading = ref(false)
-
-// Reglas simples de cliente (validación en vivo)
 const required = (v) => (v !== null && v !== undefined && String(v).trim() !== '')
 const isEmail = (v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)
 
@@ -59,7 +47,6 @@ const anyInvalid = computed(() => Object.values(invalid.value).some(Boolean))
 
 watch(form, () => { errors.value = {} }, { deep: true })
 
-// formatear fecha a YYYY-MM-DD para la BD
 const formatDate = (dateObj) => {
     if (!dateObj) return null
     const pad = (n) => String(n).padStart(2, '0')
@@ -84,7 +71,6 @@ const resetForm = () => {
 }
 
 const submit = async () => {
-    // Validación rápida en front
     if (anyInvalid.value) {
         toast.add({ severity: 'warn', summary: 'Faltan datos', detail: 'Revisá los campos resaltados.', life: 3000 })
         return
@@ -102,7 +88,6 @@ const submit = async () => {
         await axios.post(route('clientes.store'), payload)
 
         toast.add({ severity: 'success', summary: '¡Cliente creado!', detail: 'El registro se guardó correctamente.', life: 2500 })
-        // Redirigir al index luego de un mini delay
         setTimeout(() => {
             window.location.href = route('clientes.index')
         }, 600)
@@ -138,7 +123,6 @@ const submit = async () => {
 
                 <template #content>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <!-- Nombre -->
                         <div class="space-y-2">
                             <label class="text-sm font-medium flex items-center gap-2">
                                 <User class="w-4 h-4" /> Nombre del cliente *
@@ -148,10 +132,9 @@ const submit = async () => {
                                 placeholder="Ej. Comercial XYZ, S.A." class="w-full" />
                             <small v-if="invalid.nombre_cliente" class="text-red-500">Este campo es requerido.</small>
                             <small v-else-if="errors.nombre_cliente" class="text-red-500">{{ errors.nombre_cliente[0]
-                                }}</small>
+                            }}</small>
                         </div>
 
-                        <!-- Categoría -->
                         <div class="space-y-2">
                             <label class="text-sm font-medium flex items-center gap-2">
                                 <Building2 class="w-4 h-4" /> Categoría *
@@ -162,10 +145,9 @@ const submit = async () => {
                                 :pt="{ root: { class: 'w-full' } }" />
                             <small v-if="invalid.categoria_id" class="text-red-500">Seleccioná una categoría.</small>
                             <small v-else-if="errors.categoria_id" class="text-red-500">{{ errors.categoria_id[0]
-                                }}</small>
+                            }}</small>
                         </div>
 
-                        <!-- NIT -->
                         <div class="space-y-2">
                             <label class="text-sm font-medium flex items-center gap-2">
                                 <IdCard class="w-4 h-4" /> NIT *
@@ -175,8 +157,6 @@ const submit = async () => {
                             <small v-if="invalid.nit" class="text-red-500">Ingresá el NIT.</small>
                             <small v-else-if="errors.nit" class="text-red-500">{{ errors.nit[0] }}</small>
                         </div>
-
-                        <!-- Fecha nacimiento / constitución -->
                         <div class="space-y-2">
                             <label class="text-sm font-medium flex items-center gap-2">
                                 <CalendarIcon class="w-4 h-4" /> Fecha de nacimiento / constitución *
@@ -189,7 +169,6 @@ const submit = async () => {
                                 errors.fecha_nacimiento[0] }}</small>
                         </div>
 
-                        <!-- Teléfono -->
                         <div class="space-y-2">
                             <label class="text-sm font-medium flex items-center gap-2">
                                 <Phone class="w-4 h-4" /> Teléfono *
@@ -200,7 +179,6 @@ const submit = async () => {
                             <small v-else-if="errors.telefono" class="text-red-500">{{ errors.telefono[0] }}</small>
                         </div>
 
-                        <!-- Email -->
                         <div class="space-y-2">
                             <label class="text-sm font-medium flex items-center gap-2">
                                 <Mail class="w-4 h-4" /> Email
@@ -211,7 +189,6 @@ const submit = async () => {
                             <small v-else-if="errors.email" class="text-red-500">{{ errors.email[0] }}</small>
                         </div>
 
-                        <!-- Asesor asignado -->
                         <div class="space-y-2 md:col-span-2">
                             <label class="text-sm font-medium flex items-center gap-2">
                                 <UserCog class="w-4 h-4" /> Asesor asignado *
@@ -253,5 +230,9 @@ const submit = async () => {
 :deep(.p-dropdown.p-invalid .p-dropdown-label),
 :deep(.p-calendar.p-invalid .p-inputtext) {
     border-color: #ef4444 !important;
+}
+
+button{
+    width: 100% !important;
 }
 </style>

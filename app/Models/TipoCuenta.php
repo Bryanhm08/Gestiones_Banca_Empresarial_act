@@ -9,14 +9,12 @@ class TipoCuenta extends Model
 {
     use HasFactory;
 
-    protected $table = 'tipos_cuentas';
+    protected $table = 'tipos_cuenta';
 
     protected $fillable = [
         'nombre',
         'descripcion',
     ];
-
-    // Relación con cuentas
     public function cuentas()
     {
         return $this->hasMany(Cuenta::class, 'tipo_cuenta_id');
