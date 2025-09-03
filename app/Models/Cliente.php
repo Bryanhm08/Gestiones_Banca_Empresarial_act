@@ -28,8 +28,6 @@ class Cliente extends Model
         'fecha_nacimiento' => 'date:Y-m-d',
     ];
 
-    /* -------------------- Relaciones -------------------- */
-
     public function categoria(): BelongsTo
     {
         return $this->belongsTo(Categoria::class, 'categoria_id');
@@ -49,16 +47,10 @@ class Cliente extends Model
     {
         return $this->hasMany(Cuenta::class, 'cliente_id');
     }
-
-    /* -------------------- Mutators / Accessors -------------------- */
-
-    // Normaliza el NIT: trim + mayúsculas
     public function setNitAttribute($value): void
     {
         $this->attributes['nit'] = strtoupper(trim($value));
     }
-
-    /* -------------------- Query Scopes útiles -------------------- */
 
     public function scopeSearch($query, ?string $term)
     {

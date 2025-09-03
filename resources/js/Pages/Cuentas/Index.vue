@@ -3,6 +3,7 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import CuentasRecientes from '@/Components/Cuentas/CuentasRecientes.vue'
 import axios from 'axios'
+import { Head } from '@inertiajs/vue3'
 import { useToast } from 'primevue/usetoast'
 import Card from 'primevue/card'
 import Dropdown from 'primevue/dropdown'
@@ -147,11 +148,10 @@ onMounted(async () => {
 </script>
 
 <template>
+    <Head title="Crear Cuenta"/>
     <AuthenticatedLayout>
         <Toast />
-
         <div class="p-6 space-y-6">
-            <!-- Encabezado -->
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-3">
                     <CreditCard class="w-6 h-6" />
@@ -168,7 +168,6 @@ onMounted(async () => {
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                <!-- Formulario principal -->
                 <Card class="lg:col-span-2 shadow-2 rounded-2xl">
                     <template #title>
                         <div class="flex items-center gap-2">
@@ -198,8 +197,6 @@ onMounted(async () => {
                                     optionLabel="nombre" optionValue="id" placeholder="Selecciona el tipo"
                                     class="w-full" :filter="true" />
                             </div>
-
-                            <!-- Asesor -->
                             <div>
                                 <label class="block text-sm font-medium mb-1">Asesor</label>
                                 <div v-if="loadingCatalogs">
@@ -209,8 +206,6 @@ onMounted(async () => {
                                     optionLabel="nombre" optionValue="id" placeholder="Selecciona un asesor"
                                     class="w-full" :filter="true" />
                             </div>
-
-                            <!-- Fecha de apertura -->
                             <div>
                                 <label class="block text-sm font-medium mb-1">Fecha de apertura</label>
                                 <Calendar v-model="form.fecha_apertura" :maxDate="today" dateFormat="yy-mm-dd" showIcon
@@ -242,8 +237,6 @@ onMounted(async () => {
                         </div>
                     </template>
                 </Card>
-
-                <!-- Resumen / Ayuda -->
                 <div class="space-y-5">
                     <Card class="shadow-2 rounded-2xl">
                         <template #title>Resumen</template>

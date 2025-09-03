@@ -21,15 +21,13 @@ class CuentaApiController extends Controller
     {
         return TipoCuenta::select('id', 'nombre')->orderBy('nombre')->get();
     }
-public function asesores()
-{
-    return User::where('asesor', 1)
-        ->select('id', 'name as nombre')
-        ->orderBy('name')
-        ->get();
-}
-
-
+    public function asesores()
+    {
+        return User::where('asesor', 1)
+            ->select('id', 'name as nombre')
+            ->orderBy('name')
+            ->get();
+    }
     public function store(Request $request)
     {
         $v = Validator::make($request->all(), [

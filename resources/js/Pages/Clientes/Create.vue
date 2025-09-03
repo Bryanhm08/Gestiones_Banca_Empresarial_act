@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import axios from 'axios'
+import { Head } from '@inertiajs/vue3'
 import { useToast } from 'primevue/usetoast'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 
@@ -105,6 +106,7 @@ const submit = async () => {
 </script>
 
 <template>
+    <Head title="Crear Cuenta"/>
     <AuthenticatedLayout>
         <Toast />
 

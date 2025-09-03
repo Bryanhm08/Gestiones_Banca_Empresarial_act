@@ -35,7 +35,8 @@ import FileUpload from "primevue/fileupload";
 import ProgressBar from "primevue/progressbar";
 import ConfirmDialog from "primevue/confirmdialog";
 import InputMask from "primevue/inputmask";
-const appName = import.meta.env.VITE_APP_NAME || "INTERCARS";
+import Tooltip from "primevue/tooltip";
+const appName = import.meta.env.VITE_APP_NAME || "SGBE";
 
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,
@@ -89,7 +90,8 @@ createInertiaApp({
             "p-progress-bar": ProgressBar,
             "p-confirm-dialog": ConfirmDialog,
             "p-confirmdialog": ConfirmDialog,
-            "p-inputmask": InputMask
+            "p-inputmask": InputMask,
+            "p-tooltip": Tooltip
         };
         Object.entries(pv).forEach(([name, comp]) => app.component(name, comp));
 
