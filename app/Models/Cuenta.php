@@ -21,8 +21,6 @@ class Cuenta extends Model
     protected $casts = [
         'fecha_apertura' => 'date',
     ];
-
-    // Relaciones
     public function cliente()
     {
         return $this->belongsTo(Cliente::class);

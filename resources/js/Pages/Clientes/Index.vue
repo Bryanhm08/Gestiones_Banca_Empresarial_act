@@ -1,6 +1,6 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
-import { Link, usePage } from '@inertiajs/vue3'
+import { Link, usePage, Head } from '@inertiajs/vue3'
 import { onMounted } from 'vue'
 import Card from 'primevue/card'
 import Button from 'primevue/button'
@@ -22,6 +22,7 @@ onMounted(() => {
 </script>
 
 <template>
+    <Head title="Clientes"/>
     <AuthenticatedLayout>
         <Toast />
         <div class="p-6 space-y-6 max-w-7xl mx-auto">
