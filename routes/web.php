@@ -12,6 +12,8 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\CuentaApiController;
 use App\Http\Controllers\MisAsignacionesController;
+use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\UserAdminController;
 use Inertia\Inertia;
 
 Route::get('/', function () {
@@ -71,5 +73,19 @@ Route::middleware(['auth', 'module:credit_reports'])
 Route::middleware(['auth', 'module:accounts_reporting'])
     ->get('/reporteria/cuentas', [ReporteriaCuentaController::class, 'index'])
     ->name('reporteria.cuentas');
+
+Route::middleware(['auth', 'admin'])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+        Route::get('/', [AdminDashboardController::class, 'index'])->name('index');
+
+        Route::get('/users', [UserAdminController::class, 'index'])->name('users.index');
+        Route::post('/users', [UserAdminController::class, 'store'])->name('users.store');
+        Route::post('/users/{user}', [UserAdminController::class, 'update'])->name('users.update');
+
+        Route::patch('/users/{user}/toggle', [UserAdminController::class, 'toggleEstado'])->name('users.toggle');
+        Route::patch('/users/{user}/roles', [UserAdminController::class, 'updateRoles'])->name('users.roles');
+    });
 
 require __DIR__ . '/auth.php';
