@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'module' => \App\Http\Middleware\CheckModuleAccess::class,
             'no-asesor-clientes' => \App\Http\Middleware\ForbidAsesorOnClientes::class,
+            'admin' => \App\Http\Middleware\AdminOnly::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

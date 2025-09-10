@@ -12,10 +12,12 @@ import {
     Search,
     ChevronLeft,
     ChevronRight,
+    Settings,
 } from 'lucide-vue-next'
 
 const page = usePage()
 const ab = page.props.abilities || {}
+const isAdmin = computed(() => page.props.auth?.user?.admin === true)
 
 const open = ref(true)
 onMounted(() => {
@@ -29,17 +31,20 @@ const toggle = () => {
 
 const q = ref('')
 const items = computed(() => {
-    return [
+    const base = [
         { label: 'Dashboard', icon: LayoutDashboard, routeName: 'dashboard', show: true },
         { label: 'Clientes', icon: Users, routeName: 'clientes.index', show: ab.canViewClientes },
         { label: 'Cuentas', icon: Wallet2, routeName: 'cuentas.index', show: ab.canViewCuentas },
-
         { label: 'Créditos', icon: CreditCard, routeName: 'creditos.index', show: true },
         { label: 'Nuevo crédito', icon: UserPlus, routeName: 'creditos.create', show: ab.canCreateCredito },
-
         { label: 'Mis Asignaciones', icon: ClipboardList, routeName: 'mis.asignaciones', show: true },
         { label: 'Reportes', icon: FileBarChart, routeName: 'reportes.index', show: (ab.mod_credit_reports || ab.mod_accounts_report) },
-    ].filter(i => i.show)
+    ]
+    if (isAdmin.value) {
+        base.push({ label: 'Administración', icon: Settings, routeName: 'admin.index', show: true })
+    }
+
+    return base.filter(i => i.show)
 })
 const isActive = (name) => route().current(name + '*')
 </script>
