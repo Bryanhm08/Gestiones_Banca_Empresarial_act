@@ -14,54 +14,56 @@ class HandleInertiaRequests extends Middleware
      */
     protected $rootView = 'app';
 
-    /**
-     * Determine the current asset version.
-     */
     public function version(Request $request): ?string
     {
         return parent::version($request);
     }
 
-    /**
-     * Define the props that are shared by default.
-     *
-     * @return array<string, mixed>
-     */
     public function share(Request $request): array
     {
         $user = $request->user();
 
-        $hasCreditReports = false;
+        $hasCreditReports  = false;
         $hasAccountsReport = false;
 
         if ($user && ($user->relationLoaded('area') ? $user->area : $user?->area)) {
             $area = $user->area()->with('areaModules')->first();
             $labels = $area?->areaModules()->pluck('modulo')->toArray() ?? [];
-            $hasCreditReports = in_array('Reportes de créditos', $labels, true);
+            $hasCreditReports  = in_array('Reportes de créditos', $labels, true);
             $hasAccountsReport = in_array('Reportería de cuentas', $labels, true);
         }
 
-        $canClientes = $user ? ($user->admin || !$user->asesor) : false;
+        // ✅ Asesores también pueden usar Clientes/Cuentas
+        $isAdmin    = (bool) ($user->admin ?? false);
+        $isAsesor   = (bool) ($user->asesor ?? false);
+        $isOperador = (bool) ($user->operador ?? false);
+
+        $canClientes = $user ? ($isAdmin || $isAsesor || $isOperador) : false;
 
         return array_merge(parent::share($request), [
             'auth' => [
                 'user' => $user ? [
-                    'id' => $user->id,
-                    'name' => $user->name,
+                    'id'    => $user->id,
+                    'name'  => $user->name,
                     'email' => $user->email,
-                    'asesor' => (bool) $user->asesor,
-                    'admin' => (bool) $user->admin,
+                    'asesor'=> $isAsesor,
+                    'admin' => $isAdmin,
                 ] : null,
             ],
             'abilities' => [
-                'canClientes' => $canClientes,
-                'mod_credit_reports' => $hasCreditReports || ($user?->admin ?? false),
-                'mod_accounts_report' => $hasAccountsReport || ($user?->admin ?? false),
-                'canViewClientes' => $canClientes,
-                'canCreateCliente' => $canClientes,
-                'canViewCuentas' => $canClientes,
-                'canCreateCuenta' => $canClientes,
-                'canCreateCredito' => true,
+                // Módulo Clientes/Cuentas
+                'canClientes'        => $canClientes,
+                'canViewClientes'    => $canClientes,
+                'canCreateCliente'   => $canClientes,
+                'canViewCuentas'     => $canClientes,
+                'canCreateCuenta'    => $canClientes,
+
+                // Créditos
+                'canCreateCredito'   => true,
+
+                // Reportes (por módulo o admin)
+                'mod_credit_reports'  => $hasCreditReports  || $isAdmin,
+                'mod_accounts_report' => $hasAccountsReport || $isAdmin,
             ],
         ]);
     }

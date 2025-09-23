@@ -1,188 +1,125 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
-import { Link, Head} from '@inertiajs/vue3'
-import { ref, computed } from 'vue'
-
-import Card from 'primevue/card'
-import Button from 'primevue/button'
-import DataTable from 'primevue/datatable'
-import Column from 'primevue/column'
-import InputText from 'primevue/inputtext'
-import Tag from 'primevue/tag'
-import { Search, Plus, Edit, UserRound, CalendarDays, BadgeDollarSign, Eye} from 'lucide-vue-next'
+import { Head, Link, router } from '@inertiajs/vue3'
+import { computed } from 'vue'
 
 const props = defineProps({
-    creditos: { type: Array, default: () => [] },
-    canCreate: { type: Boolean, default: false },
-    isAdmin: { type: Boolean, default: false },
-    userId: { type: Number, default: null },
+  creditos:   { type: Object, default: null },  // paginator { data, links, meta... } o null
+  canCreate:  { type: Boolean, default: true },
+  isAdmin:    { type: Boolean, default: false },
+  userId:     { type: Number,  default: null },
 })
 
-const q = ref('')
-
-const money = (n) =>
-    new Intl.NumberFormat('es-GT', { style: 'currency', currency: 'GTQ' }).format(Number(n || 0))
-
-const daysTo = (yyyyMMdd) => {
-    if (!yyyyMMdd) return null
-    const today = new Date(); today.setHours(0, 0, 0, 0)
-    const [y, m, d] = yyyyMMdd.split('-').map(Number)
-    const target = new Date(y, m - 1, d)
-    return Math.round((target - today) / (1000 * 60 * 60 * 24))
-}
-const vencTag = (yyyyMMdd) => {
-    const d = daysTo(yyyyMMdd)
-    if (d === null) return { label: '—', cls: 'bg-gray-100 text-gray-600 border-gray-200' }
-    if (d < 0) return { label: `Vencido ${Math.abs(d)}d`, cls: 'bg-red-50 text-red-700 border-red-200' }
-    if (d <= 15) return { label: `Vence en ${d}d`, cls: 'bg-amber-50 text-amber-700 border-amber-200' }
-    return { label: `En ${d}d`, cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' }
-}
-
-const filtered = computed(() => {
-    const term = q.value.trim().toLowerCase()
-    if (!term) return props.creditos
-    return props.creditos.filter(c =>
-        [
-            c.id,
-            c.cliente,
-            c.tipo,
-            c.garantia,
-            c.monto,
-            c.plazo,
-            c.fecha_concesion,
-            c.fecha_vencimiento,
-            c.asesor,
-        ]
-            .map(v => String(v ?? '').toLowerCase())
-            .some(v => v.includes(term))
-    )
+// Fallbacks seguros para no romper si algo llega null/undefined
+const rows  = computed(() => {
+  if (!props.creditos) return []
+  // si en algún momento enviaron un array plano:
+  if (Array.isArray(props.creditos)) return props.creditos
+  return Array.isArray(props.creditos.data) ? props.creditos.data : []
 })
+const links = computed(() => Array.isArray(props.creditos?.links) ? props.creditos.links : [])
 
-const isAssignedToMe = (row) => row.asesor_id === props.userId
-const canEditRow = (row) => isAssignedToMe(row)
+const fmtDate = (s) => {
+  if (!s) return '—'
+  try {
+    const d = new Date(s)
+    if (Number.isNaN(d.getTime())) return s
+    const yyyy = d.getFullYear()
+    const mm   = String(d.getMonth() + 1).padStart(2, '0')
+    const dd   = String(d.getDate()).padStart(2, '0')
+    return `${yyyy}-${mm}-${dd}`
+  } catch { return s }
+}
+const fmtMoney = (n) => {
+  const v = Number(n ?? 0)
+  return new Intl.NumberFormat('es-GT', { style: 'currency', currency: 'GTQ' }).format(v)
+}
 
-const kpis = computed(() => ({
-    total: props.creditos.length,
-    monto: props.creditos.reduce((acc, c) => acc + Number(c.monto || 0), 0),
-}))
+const go = (url) => { if (url) router.visit(url) }
 </script>
 
 <template>
-    <Head title="Créditos"/>
-    <AuthenticatedLayout>
-        <template #header>
-            <div class="flex items-center justify-between gap-3">
-                <h2 class="text-xl font-semibold text-gray-800">Créditos</h2>
-                <div class="flex items-center gap-2">
-                    <div class="relative hidden sm:block">
-                        <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        <InputText v-model="q" placeholder="Buscar crédito, cliente, asesor…" class="pl-9 w-80" />
-                    </div>
-                    <Link v-if="canCreate" :href="route('creditos.create')">
-                    <Button class="bg-blue-600 hover:bg-blue-700 text-white">
-                        <Plus class="w-4 h-4 mr-2" /> Nuevo crédito
-                    </Button>
-                    </Link>
-                </div>
-            </div>
-        </template>
+  <Head title="Créditos" />
+  <AuthenticatedLayout>
+    <div class="p-6 max-w-7xl mx-auto space-y-6">
+      <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-semibold tracking-tight">Créditos</h1>
 
-        <div class="space-y-6">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Card class="rounded-2xl shadow-sm">
-                    <template #content>
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <div class="text-xs text-gray-500">Créditos</div>
-                                <div class="text-2xl font-semibold text-gray-800">{{ kpis.total }}</div>
-                            </div>
-                            <CalendarDays class="w-6 h-6 text-gray-500" />
-                        </div>
-                    </template>
-                </Card>
-                <Card class="rounded-2xl shadow-sm">
-                    <template #content>
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <div class="text-xs text-gray-500">Monto total</div>
-                                <div class="text-2xl font-semibold text-gray-800">{{ money(kpis.monto) }}</div>
-                            </div>
-                            <BadgeDollarSign class="w-6 h-6 text-gray-500" />
-                        </div>
-                    </template>
-                </Card>
-            </div>
-            <Card class="rounded-2xl shadow-sm">
-                <template #content>
-                    <div class="sm:hidden mb-3">
-                        <div class="relative">
-                            <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <InputText v-model="q" placeholder="Buscar…" class="pl-9 w-full" />
-                        </div>
-                    </div>
-
-                    <DataTable :value="filtered" paginator :rows="10" :rowsPerPageOptions="[10, 20, 50]" dataKey="id"
-                        responsiveLayout="scroll" class="text-sm">
-                        <Column field="id" header="N°" style="width: 90px" sortable />
-                        <Column field="cliente" header="Cliente" sortable />
-                        <Column header="Tipo" sortable>
-                            <template #body="{ data }">
-                                <Tag :value="data.tipo || '—'" class="bg-indigo-50 text-indigo-700 border-indigo-200" />
-                            </template>
-                        </Column>
-                        <Column header="Garantía" sortable>
-                            <template #body="{ data }">
-                                <Tag :value="data.garantia || '—'"
-                                    class="bg-emerald-50 text-emerald-700 border-emerald-200" />
-                            </template>
-                        </Column>
-                        <Column field="monto" header="Monto" sortable style="width: 160px">
-                            <template #body="{ data }">{{ money(data.monto) }}</template>
-                        </Column>
-                        <Column field="plazo" header="Plazo" sortable style="width: 120px">
-                            <template #body="{ data }">{{ data.plazo }} meses</template>
-                        </Column>
-                        <Column field="fecha_concesion" header="Concesión" sortable style="width: 130px" />
-                        <Column header="Vencimiento" sortable style="width: 180px">
-                            <template #body="{ data }">
-                                <div class="flex items-center gap-2">
-                                    <span>{{ data.fecha_vencimiento }}</span>
-                                    <Tag :value="vencTag(data.fecha_vencimiento).label"
-                                        :class="vencTag(data.fecha_vencimiento).cls" />
-                                </div>
-                            </template>
-                        </Column>
-                        <Column field="asesor" header="Asignado a" sortable>
-                            <template #body="{ data }">
-                                <div class="flex items-center gap-2">
-                                    <UserRound class="w-4 h-4 text-gray-400" />
-                                    <span>{{ data.asesor || '—' }}</span>
-                                </div>
-                            </template>
-                        </Column>
-                        <Column header="Acciones" style="width: 140px">
-                            <template #body="{ data }">
-                                <div class="flex gap-2">
-                                    <Link v-if="canEditRow(data)" :href="route('creditos.edit', data.id)">
-                                    <Button size="small" outlined>
-                                        <Edit class="w-4 h-4 mr-2" /> Editar
-                                    </Button>
-                                    </Link>
-                                    <Link v-else :href="route('creditos.show', data.id)">
-                                    <Button size="small" outlined>
-                                        <Eye class="w-4 h-4 mr-2" /> Visualizar
-                                    </Button>
-                                    </Link>
-                                </div>
-                            </template>
-                        </Column>
-                    </DataTable>
-
-                    <div v-if="filtered.length === 0" class="py-6 text-center text-gray-500">
-                        No se encontraron créditos con ese filtro.
-                    </div>
-                </template>
-            </Card>
+        <div v-if="canCreate">
+          <Link :href="route('creditos.create')"
+                class="inline-flex items-center rounded-lg bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-700">
+            Nuevo crédito
+          </Link>
         </div>
-    </AuthenticatedLayout>
+      </div>
+
+      <!-- Estado vacío -->
+      <div v-if="rows.length === 0" class="rounded-xl border border-dashed p-10 text-center text-gray-500">
+        No hay créditos registrados.
+        <div v-if="canCreate" class="mt-4">
+          <Link :href="route('creditos.create')" class="text-emerald-700 hover:underline">Crear el primero →</Link>
+        </div>
+      </div>
+
+      <!-- Tabla -->
+      <div v-else class="overflow-x-auto rounded-xl border">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Garantía</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plazo</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Concesión</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vencimiento</th>
+              <th class="px-4 py-3"></th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <tr v-for="c in rows" :key="c.id" class="hover:bg-gray-50">
+              <td class="px-4 py-3 text-gray-700">{{ c.id }}</td>
+              <td class="px-4 py-3">
+                {{ c.cliente?.nombre_cliente ?? '—' }}
+              </td>
+              <td class="px-4 py-3">
+                {{ c.tipo_credito?.nombre || c.tipoCredito?.nombre || '—' }}
+              </td>
+              <td class="px-4 py-3">
+                {{ c.garantia?.nombre || '—' }}
+              </td>
+              <td class="px-4 py-3 font-medium">{{ fmtMoney(c.monto) }}</td>
+              <td class="px-4 py-3">{{ c.plazo ?? '—' }} mes(es)</td>
+              <td class="px-4 py-3">{{ fmtDate(c.fecha_concesion) }}</td>
+              <td class="px-4 py-3">{{ fmtDate(c.fecha_vencimiento) }}</td>
+              <td class="px-4 py-3 text-right">
+                <div class="inline-flex items-center gap-2">
+                  <Link :href="route('creditos.show', c.id)"
+                        class="text-emerald-700 hover:underline">Ver</Link>
+                  <span class="text-gray-300">|</span>
+                  <Link :href="route('creditos.edit', c.id)"
+                        class="text-gray-700 hover:underline">Editar</Link>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Paginación -->
+      <div v-if="links.length > 0" class="flex flex-wrap items-center gap-2 pt-2">
+        <button v-for="(l, idx) in links" :key="idx"
+                :disabled="!l.url"
+                @click="go(l.url)"
+                class="px-3 py-1.5 rounded border"
+                :class="[
+                  l.active ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-700 hover:bg-gray-50',
+                  !l.url && !l.active ? 'opacity-50 cursor-not-allowed' : ''
+                ]"
+                v-html="l.label">
+        </button>
+      </div>
+    </div>
+  </AuthenticatedLayout>
 </template>

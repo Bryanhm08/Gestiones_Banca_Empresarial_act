@@ -21,9 +21,12 @@ class Cuenta extends Model
     protected $casts = [
         'fecha_apertura' => 'date',
     ];
+
+    /* ===================== Relaciones ===================== */
+
     public function cliente()
     {
-        return $this->belongsTo(Cliente::class);
+        return $this->belongsTo(Cliente::class, 'cliente_id');
     }
 
     public function tipo()
@@ -31,8 +34,12 @@ class Cuenta extends Model
         return $this->belongsTo(TipoCuenta::class, 'tipo_cuenta_id');
     }
 
+    /**
+     * Asesor (usuario dueño/gestor de la cuenta)
+     */
     public function asesor()
     {
-        return $this->belongsTo(User::class, 'asesor_id');
+        // Usamos FQCN para mantener consistencia y evitar imports
+        return $this->belongsTo(\App\Models\User::class, 'asesor_id');
     }
 }

@@ -9,17 +9,8 @@ class ForbidAsesorOnClientes
 {
     public function handle(Request $request, Closure $next)
     {
-        $user = $request->user();
-        if (!$user) {
-            return redirect()->route('login');
-        }
-        if ($user->admin) {
-            return $next($request);
-        }
-        if ($user->asesor === true) {
-            abort(403, 'Acceso restringido para asesores.');
-        }
-
+        // Antes bloqueaba a asesores. Ahora deja pasar a todos los autenticados.
+        // (Si aún está registrado en Kernel, no romperá nada)
         return $next($request);
     }
 }

@@ -7,13 +7,16 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Builder;
 
 class Cliente extends Model
 {
     use HasFactory, SoftDeletes;
 
+    /** Tabla explícita (por claridad) */
     protected $table = 'clientes';
 
+    /** Campos asignables en masa */
     protected $fillable = [
         'nombre_cliente',
         'categoria_id',
@@ -24,9 +27,12 @@ class Cliente extends Model
         'asesor_id',
     ];
 
+    /** Casts (se mantiene el formateo a Y-m-d que ya usabas) */
     protected $casts = [
         'fecha_nacimiento' => 'date:Y-m-d',
     ];
+
+    /* ===================== Relaciones ===================== */
 
     public function categoria(): BelongsTo
     {
@@ -47,26 +53,47 @@ class Cliente extends Model
     {
         return $this->hasMany(Cuenta::class, 'cliente_id');
     }
+
+    /* ===================== Mutators ===================== */
+
     public function setNitAttribute($value): void
     {
-        $this->attributes['nit'] = strtoupper(trim($value));
+        // Soporta nulos y acentos; quita espacios
+        $this->attributes['nit'] = isset($value)
+            ? mb_strtoupper(trim($value), 'UTF-8')
+            : null;
     }
 
-    public function scopeSearch($query, ?string $term)
+    /* ===================== Scopes ===================== */
+
+    /**
+     * Búsqueda rápida por nombre/NIT/teléfono/email.
+     *
+     * Uso: Cliente::search($term)->get();
+     */
+    public function scopeSearch(Builder $query, ?string $term): Builder
     {
-        if (!$term)
+        $term = trim((string) $term);
+        if ($term === '') {
             return $query;
+        }
 
-        $like = '%' . trim($term) . '%';
+        $like = '%' . $term . '%';
 
-        return $query->where(function ($q) use ($like) {
+        return $query->where(function (Builder $q) use ($like) {
             $q->where('nombre_cliente', 'like', $like)
-                ->orWhere('nit', 'like', $like)
-                ->orWhere('telefono', 'like', $like)
-                ->orWhere('email', 'like', $like);
+              ->orWhere('nit', 'like', $like)
+              ->orWhere('telefono', 'like', $like)
+              ->orWhere('email', 'like', $like);
         });
     }
-    public function scopeByAsesor($query, int $asesorId)
+
+    /**
+     * Limita a los clientes de un asesor específico.
+     *
+     * Uso: Cliente::byAsesor($userId)->get();
+     */
+    public function scopeByAsesor(Builder $query, int $asesorId): Builder
     {
         return $query->where('asesor_id', $asesorId);
     }

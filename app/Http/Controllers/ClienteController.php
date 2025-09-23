@@ -2,48 +2,89 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreClienteRequest;
-use Illuminate\Support\Facades\DB;
+use App\Models\Cliente;
+use App\Models\Categoria; // ajusta si tu modelo está en otro namespace
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
-use Illuminate\Http\RedirectResponse;
+use Inertia\Response;
 
 class ClienteController extends Controller
 {
-    public function index()
+    /**
+     * Listado de clientes (asesor ve sólo los suyos; incluye búsqueda ?q=)
+     */
+    public function index(Request $request): Response
     {
-        return Inertia::render('Clientes/Index');
+        $user = Auth::user();
+
+        $query = Cliente::query()
+            ->with(['asesor', 'categoria'])
+            ->latest();
+
+        // Búsqueda rápida
+        $term = trim((string) $request->query('q', ''));
+        if ($term !== '') {
+            $query->search($term);
+        }
+
+        // Si es asesor: sólo sus clientes
+        if ($user?->asesor) {
+            $query->byAsesor($user->id);
+        }
+
+        $clientes = $query->paginate(12)->withQueryString();
+
+        return Inertia::render('Clientes/Index', [
+            'clientes' => $clientes,
+            'filters'  => ['q' => $term],
+        ]);
     }
 
-    public function create()
+    /**
+     * Formulario de creación (sólo categorías; SIN asesores)
+     */
+    public function create(): Response
     {
-        $categorias = DB::table('categorias')->select('id', 'nombre')->orderBy('nombre')->get();
-        $asesores = DB::table('users')
-            ->select('id', 'name')
-            ->where('estado', 1)
-            ->where('asesor', 1)
-            ->orderBy('name')
+        $categorias = Categoria::select('id', 'nombre')
+            ->orderBy('nombre')
             ->get();
 
         return Inertia::render('Clientes/Create', [
             'categorias' => $categorias,
-            'asesores' => $asesores,
         ]);
     }
 
-    public function store(StoreClienteRequest $request): RedirectResponse
+    /**
+     * Guarda un cliente nuevo.
+     * 🔒 Siempre se asigna asesor_id = auth()->id() (no se envía desde el front).
+     */
+    public function store(Request $request)
     {
-        DB::table('clientes')->insert([
-            'nombre_cliente' => $request->nombre_cliente,
-            'categoria_id' => $request->categoria_id,
-            'nit' => $request->nit,
-            'fecha_nacimiento' => $request->fecha_nacimiento,
-            'telefono' => $request->telefono,
-            'email' => $request->email,
-            'asesor_id' => $request->asesor_id,
-            'created_at' => now(),
-            'updated_at' => now(),
+        $user = Auth::user();
+
+        $validated = $request->validate([
+            'nombre_cliente'   => ['required', 'string', 'max:255'],
+            'categoria_id'     => ['required', 'exists:categorias,id'], // ajusta si tu tabla se llama distinto
+            'nit'              => ['required', 'string', 'max:32'],
+            'telefono'         => ['required', 'string', 'max:50'],
+            'fecha_nacimiento' => ['required', 'date'],
+            'email'            => ['nullable', 'email', 'max:255'],
+            // 👇 ya no validamos asesor_id
         ]);
 
-        return redirect()->route('clientes.index')->with('success', 'Cliente creado con éxito.');
+        Cliente::create([
+            'nombre_cliente'   => $validated['nombre_cliente'],
+            'categoria_id'     => $validated['categoria_id'],
+            'nit'              => $validated['nit'],
+            'telefono'         => $validated['telefono'],
+            'email'            => $validated['email'] ?? null,
+            'fecha_nacimiento' => $validated['fecha_nacimiento'],
+            'asesor_id'        => $user->id, // ← autoasignado
+        ]);
+
+        return redirect()
+            ->route('clientes.index')
+            ->with('success', 'Cliente creado con éxito.');
     }
 }

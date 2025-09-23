@@ -1,6 +1,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { Link, usePage } from '@inertiajs/vue3'
+import { CalendarClock } from 'lucide-vue-next'
+
 import {
     LayoutDashboard,
     Users,
@@ -39,6 +41,7 @@ const items = computed(() => {
         { label: 'Nuevo crédito', icon: UserPlus, routeName: 'creditos.create', show: ab.canCreateCredito },
         { label: 'Mis Asignaciones', icon: ClipboardList, routeName: 'mis.asignaciones', show: true },
         { label: 'Reportes', icon: FileBarChart, routeName: 'reportes.index', show: (ab.mod_credit_reports || ab.mod_accounts_report) },
+        { label: 'Calendario', icon: CalendarClock, routeName: 'calendario.index', show: true },
     ]
     if (isAdmin.value) {
         base.push({ label: 'Administración', icon: Settings, routeName: 'admin.index', show: true })
