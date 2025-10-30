@@ -43,17 +43,12 @@ const setStatus = (rowId, newStatus) => {
   <div class="p-4 space-y-4">
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-2">
-        <Link :href="route('liberaciones.index')"><Button label="Volver" icon="pi pi-arrow-left" text/></Link>
+        <a :href="route('liberaciones.index')"><Button label="Volver" icon="pi pi-arrow-left" text/></a>
         <h1 class="text-2xl font-semibold">Administrar – Liberación #{{ lib.id }}</h1>
       </div>
       <div class="flex gap-2">
-        <!-- 🔽 CAMBIO: usar <a> en lugar de <Link> para descarga real -->
-        <a :href="route('liberaciones.export', lib.id)">
-          <Button label="Generar Excel" icon="pi pi-file-excel" />
-        </a>
-        <Link :href="route('liberaciones.edit', lib.id)">
-          <Button label="Editar" icon="pi pi-pencil" text/>
-        </Link>
+        <a :href="route('liberaciones.export', lib.id)"><Button label="Generar Excel" icon="pi pi-file-excel" /></a>
+        <a :href="route('liberaciones.edit', lib.id)"><Button label="Editar" icon="pi pi-pencil" text/></a>
       </div>
     </div>
 
@@ -89,5 +84,6 @@ const setStatus = (rowId, newStatus) => {
         </tbody>
       </table>
     </div>
+
   </div>
 </template>

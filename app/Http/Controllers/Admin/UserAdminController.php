@@ -28,34 +28,25 @@ class UserAdminController extends Controller
             })
             ->latest('id')
             ->get([
-                'id',
-                'username',
-                'name',
-                'email',
-                'area_id',
-                'puesto',
-                'asesor',
-                'admin',
-                'estado',
-                'created_at'
+                'id','username','name','email','area_id','puesto','asesor','admin','estado','created_at'
             ])
             ->map(fn($u) => [
-                'id' => $u->id,
+                'id'       => $u->id,
                 'username' => $u->username,
-                'name' => $u->name,
-                'email' => $u->email,
-                'puesto' => $u->puesto,
-                'area' => $u->area?->nombre,
-                'area_id' => $u->area_id,
-                'asesor' => (bool) $u->asesor,
-                'admin' => (bool) $u->admin,
-                'estado' => (bool) $u->estado,
-                'created' => optional($u->created_at)->format('Y-m-d'),
+                'name'     => $u->name,
+                'email'    => $u->email,
+                'puesto'   => $u->puesto,
+                'area'     => $u->area?->nombre,
+                'area_id'  => $u->area_id,
+                'asesor'   => (bool) $u->asesor,
+                'admin'    => (bool) $u->admin,
+                'estado'   => (bool) $u->estado,
+                'created'  => optional($u->created_at)->format('Y-m-d'),
             ]);
 
         return Inertia::render('Admin/Users/Index', [
             'users' => $users,
-            'areas' => Area::orderBy('nombre')->get(['id', 'nombre']),
+            'areas' => Area::orderBy('nombre')->get(['id','nombre']),
             'query' => $q,
         ]);
     }
@@ -71,11 +62,13 @@ class UserAdminController extends Controller
     public function update(UpdateUserRequest $request, User $user)
     {
         $data = $request->validated();
+
         if (!empty($data['password'])) {
             $data['password'] = Hash::make($data['password']);
         } else {
             unset($data['password']);
         }
+
         $user->update($data);
         return back()->with('success', 'Usuario actualizado');
     }
@@ -90,11 +83,12 @@ class UserAdminController extends Controller
     public function updateRoles(Request $request, User $user)
     {
         $request->validate([
-            'asesor' => ['required', 'boolean'],
-            'admin' => ['required', 'boolean'],
+            'asesor' => ['required','boolean'],
+            'admin'  => ['required','boolean'],
         ]);
+
         $user->asesor = $request->boolean('asesor');
-        $user->admin = $request->boolean('admin');
+        $user->admin  = $request->boolean('admin');
         $user->save();
 
         return response()->json(['ok' => true, 'asesor' => $user->asesor, 'admin' => $user->admin]);

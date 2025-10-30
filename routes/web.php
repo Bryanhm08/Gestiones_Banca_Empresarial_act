@@ -18,11 +18,22 @@ use App\Http\Controllers\MisAsignacionesController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\UserAdminController;
 
+
 // Reportes de créditos (admin, export a Excel)
 use App\Http\Controllers\Reportes\CreditosReporteController;
 
 // Calendario
 use App\Http\Controllers\CalendarioController;
+
+// ✅ NUEVO: Liberaciones
+use App\Http\Controllers\LiberacionesController;
+
+// routes/web.php
+
+
+Route::get('/liberaciones/{lib}/export', [LiberacionesController::class, 'exportExcel'])
+    ->name('liberaciones.export');
+
 
 // Home -> Login (Inertia)
 Route::get('/', function () {
@@ -127,4 +138,51 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/reportes/creditos/admin/export', [CreditosReporteController::class, 'export'])->name('reportes.creditos.export');
 });
 
+
+// ✅✅ NUEVO MÓDULO: LIBERACIONES
+Route::middleware(['auth'])->group(function () {
+
+    // Listado principal (con botón "Agregar listado de liberaciones")
+    Route::get('/liberaciones',                 [LiberacionesController::class, 'index'])->name('liberaciones.index');
+
+    // Crear un nuevo "cuadro de liberación"
+    Route::get('/liberaciones/create',          [LiberacionesController::class, 'create'])->name('liberaciones.create');
+    Route::post('/liberaciones',                [LiberacionesController::class, 'store'])->name('liberaciones.store');
+
+    // Administrar (ver la tabla, filtrar, cambiar estatus, exportar)
+    Route::get('/liberaciones/{lib}',           [LiberacionesController::class, 'show'])->name('liberaciones.show');
+    Route::patch('/liberaciones/{lib}/rows/{rowId}/status',      [LiberacionesController::class, 'updateRowStatus'])->name('liberaciones.rows.status');
+    Route::get('/liberaciones/{lib}/export',    [LiberacionesController::class, 'exportExcel'])->name('liberaciones.export');
+
+    // Editar estructura (agregar/eliminar filas/columnas con confirmación)
+    Route::get('/liberaciones/{lib}/edit',      [LiberacionesController::class, 'edit'])->name('liberaciones.edit');
+    Route::patch('/liberaciones/{lib}',         [LiberacionesController::class, 'updateStructure'])->name('liberaciones.update');
+
+    // Acciones puntuales para filas/columnas
+    Route::post('/liberaciones/{lib}/rows',     [LiberacionesController::class, 'addRow'])->name('liberaciones.rows.add');
+    Route::delete('/liberaciones/{lib}/rows/{rowId}', [LiberacionesController::class, 'removeRow'])->name('liberaciones.rows.remove');
+    Route::post('/liberaciones/{lib}/columns',  [LiberacionesController::class, 'addColumn'])->name('liberaciones.columns.add');
+    Route::delete('/liberaciones/{lib}/columns/{colId}', [LiberacionesController::class, 'removeColumn'])->name('liberaciones.columns.remove');
+});
+
 require __DIR__ . '/auth.php';
+
+
+Route::middleware(['auth','verified'])->group(function () {
+    Route::get('/liberaciones',                 [LiberacionesController::class,'index'])->name('liberaciones.index');
+    Route::get('/liberaciones/create',          [LiberacionesController::class,'create'])->name('liberaciones.create');
+    Route::post('/liberaciones',                [LiberacionesController::class,'store'])->name('liberaciones.store');
+
+    Route::get('/liberaciones/{lib}',           [LiberacionesController::class,'show'])->name('liberaciones.show');
+    Route::patch('/liberaciones/{lib}/rows/{rowId}/status', [LiberacionesController::class,'updateRowStatus'])->name('liberaciones.rows.status');
+
+    Route::get('/liberaciones/{lib}/edit',      [LiberacionesController::class,'edit'])->name('liberaciones.edit');
+    Route::patch('/liberaciones/{lib}',         [LiberacionesController::class,'updateStructure'])->name('liberaciones.update');
+
+    Route::post('/liberaciones/{lib}/rows',     [LiberacionesController::class,'addRow'])->name('liberaciones.rows.add');
+    Route::delete('/liberaciones/{lib}/rows/{rowId}', [LiberacionesController::class,'removeRow'])->name('liberaciones.rows.remove');
+    Route::post('/liberaciones/{lib}/columns',  [LiberacionesController::class,'addColumn'])->name('liberaciones.columns.add');
+    Route::delete('/liberaciones/{lib}/columns/{colId}', [LiberacionesController::class,'removeColumn'])->name('liberaciones.columns.remove');
+
+    Route::get('/liberaciones/{lib}/export',    [LiberacionesController::class,'exportExcel'])->name('liberaciones.export');
+});

@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue'
-import { router, usePage } from '@inertiajs/vue3'
+import { router } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import Card from 'primevue/card'
 import InputText from 'primevue/inputtext'
@@ -13,75 +13,85 @@ import Dropdown from 'primevue/dropdown'
 import Password from 'primevue/password'
 import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
-import { Shield, UserCog, UserPlus, Search, Lock, Mail, BadgeInfo } from 'lucide-vue-next'
+import { Shield, UserCog, UserPlus, Search } from 'lucide-vue-next'
 import axios from 'axios'
 
 const props = defineProps({
-    users: Array,
-    areas: Array,
-    query: String,
+  users: Array,
+  areas: Array,
+  query: String,
 })
 
 const toast = useToast()
 const q = ref(props.query || '')
 
 const filtered = computed(() => {
-    const t = q.value.trim().toLowerCase()
-    if (!t) return props.users
-    return props.users.filter(u =>
-        [u.username, u.name, u.email, u.area, u.puesto].some(v => String(v ?? '').toLowerCase().includes(t))
-    )
+  const t = q.value.trim().toLowerCase()
+  if (!t) return props.users
+  return props.users.filter(u =>
+    [u.username, u.name, u.email, u.area, u.puesto].some(v => String(v ?? '').toLowerCase().includes(t))
+  )
 })
 
-/** Crear / editar */
 const showForm = ref(false)
 const editing = ref(false)
 const form = ref({
-    id: null, username: '', name: '', email: '',
-    area_id: null, puesto: '', password: '',
-    asesor: false, admin: false, estado: true,
+  id: null, username: '', name: '', email: '',
+  area_id: null, puesto: '', password: '',
+  asesor: false, admin: false, estado: true,
 })
 
 const openCreate = () => {
-    editing.value = false
-    form.value = { id: null, username: '', name: '', email: '', area_id: null, puesto: '', password: '', asesor: false, admin: false, estado: true }
-    showForm.value = true
+  editing.value = false
+  form.value = { id: null, username: '', name: '', email: '', area_id: null, puesto: '', password: '', asesor: false, admin: false, estado: true }
+  showForm.value = true
 }
 const openEdit = (u) => {
-    editing.value = true
-    form.value = { ...u, password: '' }
-    showForm.value = true
+  editing.value = true
+  form.value = { ...u, password: '' }
+  showForm.value = true
+}
+
+const firstError = (err) => {
+  const bag = err?.response?.data?.errors
+  if (!bag) return null
+  const key = Object.keys(bag)[0]
+  return Array.isArray(bag[key]) ? bag[key][0] : null
 }
 
 const submit = async () => {
-    try {
-        if (editing.value) {
-            await axios.post(route('admin.users.update', form.value.id), form.value)
-            toast.add({ severity: 'success', summary: 'Actualizado', life: 1600 })
-        } else {
-            await axios.post(route('admin.users.store'), form.value)
-            toast.add({ severity: 'success', summary: 'Creado', life: 1600 })
-        }
-        router.reload({ only: ['users'] })
-        showForm.value = false
-    } catch (e) {
-        toast.add({ severity: 'error', summary: 'Error', detail: 'Revisá los campos.', life: 2500 })
+  try {
+    // payload limpio
+    const payload = {
+      username: (form.value.username || '').trim(),
+      name: (form.value.name || '').trim(),
+      email: (form.value.email || '').trim(),
+      puesto: form.value.puesto || null,
+      area_id: form.value.area_id ?? null,
+      asesor: !!form.value.asesor,
+      admin: !!form.value.admin,
+      estado: !!form.value.estado,
     }
-}
+    if (!editing.value || (form.value.password && form.value.password.length > 0)) {
+      payload.password = form.value.password || ''
+    }
 
-const toggleEstado = async (u) => {
-    const { data } = await axios.patch(route('admin.users.toggle', u.id))
-    u.estado = data.estado
-}
+    if (editing.value) {
+      await axios.post(route('admin.users.update', form.value.id), payload)
+      toast.add({ severity: 'success', summary: 'Actualizado', life: 1600 })
+    } else {
+      await axios.post(route('admin.users.store'), payload)
+      toast.add({ severity: 'success', summary: 'Creado', life: 1600 })
+    }
 
-const toggleRoles = async (u, role) => {
-    const payload = { asesor: u.asesor, admin: u.admin }
-    payload[role] = !payload[role]
-    const { data } = await axios.patch(route('admin.users.roles', u.id), payload)
-    u.asesor = data.asesor
-    u.admin = data.admin
+    router.reload({ only: ['users'] })
+    showForm.value = false
+  } catch (e) {
+    toast.add({ severity: 'error', summary: 'Error', detail: firstError(e) ?? 'Revisá los campos.', life: 2800 })
+  }
 }
 </script>
+
 
 <template>
     <AuthenticatedLayout>
