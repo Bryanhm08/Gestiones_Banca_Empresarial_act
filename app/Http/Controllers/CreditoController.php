@@ -11,7 +11,6 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
-use Carbon\Carbon;
 
 class CreditoController extends Controller
 {
@@ -50,6 +49,8 @@ class CreditoController extends Controller
      * Formulario de creación:
      * - Admin: puede elegir cualquier cliente y asesor
      * - Asesor: solo clientes propios y se fija defaultAsesorId = me.id
+     *
+     * En el nuevo enfoque (pipeline), ya no se manejan fechas de concesión/vencimiento.
      */
     public function create(): Response
     {
@@ -88,24 +89,23 @@ class CreditoController extends Controller
     }
 
     /**
-     * Crea un crédito:
+     * Crea una operación (crédito en pipeline):
      * - Admin: puede elegir asesor_id (opcional); si no, se usa su propio id
      * - Asesor: se fuerza asesor_id = auth()->id()
-     * - La fecha de concesión se coloca automáticamente HOY.
-     * - Vencimiento = hoy + plazo (meses)
+     * - Ya NO se guardan fecha_concesion ni fecha_vencimiento.
      */
     public function store(Request $request)
     {
         $user = Auth::user();
 
-        // Validación sin fecha_concesion
+        // Validación sin fechas
         $data = $request->validate([
-            'cliente_id'       => ['required', 'exists:clientes,id'],
-            'tipo_credito_id'  => ['required', 'exists:tipos_credito,id'],
-            'garantia_id'      => ['required', 'exists:garantias,id'],
-            'monto'            => ['required', 'numeric', 'min:0.01'],
-            'plazo'            => ['required', 'integer', 'min:1', 'max:360'],
-            'asesor_id'        => ['nullable', 'integer', 'exists:users,id'],
+            'cliente_id'      => ['required', 'exists:clientes,id'],
+            'tipo_credito_id' => ['required', 'exists:tipos_credito,id'],
+            'garantia_id'     => ['required', 'exists:garantias,id'],
+            'monto'           => ['required', 'numeric', 'min:0.01'],
+            'plazo'           => ['required', 'integer', 'min:1', 'max:360'],
+            'asesor_id'       => ['nullable', 'integer', 'exists:users,id'],
         ]);
 
         $asesorId = $user->admin ? ($data['asesor_id'] ?? $user->id) : $user->id;
@@ -121,33 +121,27 @@ class CreditoController extends Controller
             }
         }
 
-        $concesion   = Carbon::today();
-        $vencimiento = (clone $concesion)->addMonths((int) $data['plazo']);
-
-        DB::transaction(function () use ($data, $concesion, $vencimiento, $asesorId) {
+        DB::transaction(function () use ($data, $asesorId) {
             Credito::create([
-                'cliente_id'        => $data['cliente_id'],
-                'tipo_credito_id'   => $data['tipo_credito_id'],
-                'garantia_id'       => $data['garantia_id'],
-                'monto'             => $data['monto'],
-                'plazo'             => $data['plazo'],
-                'fecha_concesion'   => $concesion->format('Y-m-d'),
-                'fecha_vencimiento' => $vencimiento->format('Y-m-d'),
-                'asesor_id'         => $asesorId,
+                'cliente_id'      => $data['cliente_id'],
+                'tipo_credito_id' => $data['tipo_credito_id'],
+                'garantia_id'     => $data['garantia_id'],
+                'monto'           => $data['monto'],
+                'plazo'           => $data['plazo'],
+                'asesor_id'       => $asesorId,
+                // fecha_concesion y fecha_vencimiento quedan nulas (no se usan en pipeline)
             ]);
         });
 
-        return redirect()->route('creditos.index')->with('success', 'Crédito creado con éxito.');
+        return redirect()->route('creditos.index')->with('success', 'Operación creada con éxito.');
     }
 
     /**
      * Vista de edición con timeline y catálogo de etapas.
-     * Se envían TODAS las etapas nuevas (vigentes) que aún no se han usado,
-     * marcando cuáles están habilitadas para seleccionar según las reglas.
      */
     public function edit(int $id): Response
     {
-        $user    = Auth::user();
+        $user = Auth::user();
 
         $credito = Credito::with([
             'cliente:id,nombre_cliente,asesor_id',
@@ -200,7 +194,7 @@ class CreditoController extends Controller
         }
 
         // Enviar TODO el catálogo NUEVO (sin repetir los ya usados),
-        // y marcar allowed/disabled para el Dropdown del front.
+        // y marcar allowed/disabled
         $estadosCatalog = $estadosAll
             ->reject(fn ($e) => in_array($e->id, $alcanzadosIds, true))
             ->values()
@@ -211,7 +205,7 @@ class CreditoController extends Controller
                     'nombre'   => $e->nombre,
                     'orden'    => $e->orden,
                     'allowed'  => $isAllowed,
-                    'disabled' => !$isAllowed, // útil para PrimeVue optionDisabled
+                    'disabled' => !$isAllowed,
                 ];
             });
 
@@ -229,30 +223,32 @@ class CreditoController extends Controller
 
         return Inertia::render('Creditos/Edit', [
             'credito' => [
-                'id'                => $credito->id,
-                'cliente'           => $credito->cliente?->nombre_cliente,
-                'cliente_id'        => $credito->cliente_id,
-                'asesor'            => $credito->asesor?->name,
-                'asesor_id'         => $credito->asesor_id,
-                'tipo'              => $credito->tipoCredito?->nombre,
-                'tipo_credito_id'   => $credito->tipo_credito_id,
-                'garantia'          => $credito->garantia?->nombre,
-                'garantia_id'       => $credito->garantia_id,
-                'monto'             => (float) $credito->monto,
-                'plazo'             => (int) $credito->plazo,
+                'id'          => $credito->id,
+                'cliente'     => $credito->cliente?->nombre_cliente,
+                'cliente_id'  => $credito->cliente_id,
+                'asesor'      => $credito->asesor?->name,
+                'asesor_id'   => $credito->asesor_id,
+                'tipo'        => $credito->tipoCredito?->nombre,
+                'tipo_credito_id' => $credito->tipo_credito_id,
+                'garantia'    => $credito->garantia?->nombre,
+                'garantia_id' => $credito->garantia_id,
+                'monto'       => (float) $credito->monto,
+                'plazo'       => (int) $credito->plazo,
+                // fechas se envían si existen, pero ya no se editan ni se usan en lógica
                 'fecha_concesion'   => optional($credito->fecha_concesion)->format('Y-m-d'),
                 'fecha_vencimiento' => optional($credito->fecha_vencimiento)->format('Y-m-d'),
             ],
-            'tipos'            => $tipos,
-            'garantias'        => $garantias,
-            'estadosCatalog'   => $estadosCatalog, // TODAS nuevas (sin usadas) + allowed/disabled
-            'timeline'         => $timeline,
-            'isAdmin'          => (bool) $user->admin,
+            'tipos'          => $tipos,
+            'garantias'      => $garantias,
+            'estadosCatalog' => $estadosCatalog,
+            'timeline'       => $timeline,
+            'amortizaciones' => $amortizaciones,
+            'isAdmin'        => (bool) $user->admin,
         ]);
     }
 
     /**
-     * Actualiza datos básicos del crédito.
+     * Actualiza datos básicos de la operación (sin fechas).
      */
     public function update(Request $request, int $id)
     {
@@ -264,20 +260,16 @@ class CreditoController extends Controller
         }
 
         $data = $request->validate([
-            'tipo_credito_id'  => ['required', 'exists:tipos_credito,id'],
-            'garantia_id'      => ['required', 'exists:garantias,id'],
-            'monto'            => ['required', 'numeric', 'min:0.01'],
-            'plazo'            => ['required', 'integer', 'min:1', 'max:360'],
-            'fecha_concesion'  => ['required', 'date'],
+            'tipo_credito_id' => ['required', 'exists:tipos_credito,id'],
+            'garantia_id'     => ['required', 'exists:garantias,id'],
+            'monto'           => ['required', 'numeric', 'min:0.01'],
+            'plazo'           => ['required', 'integer', 'min:1', 'max:360'],
+            // fecha_concesion / fecha_vencimiento ya no se actualizan
         ]);
-
-        $concesion                    = Carbon::parse($data['fecha_concesion']);
-        $data['fecha_vencimiento']    = $concesion->copy()->addMonths((int) $data['plazo'])->format('Y-m-d');
-        $data['fecha_concesion']      = $concesion->format('Y-m-d');
 
         $credito->update($data);
 
-        return back()->with('success', 'Crédito actualizado.');
+        return back()->with('success', 'Operación actualizada.');
     }
 
     /**
@@ -296,7 +288,7 @@ class CreditoController extends Controller
             'estado_id' => ['required', 'exists:estados_credito,id'],
         ]);
 
-        // Solo aceptar estados VIGENTES (nuevos, con 'orden')
+        // Solo aceptar estados VIGENTES
         $estado = EstadoCredito::vigentes()
             ->select('id','nombre','orden')
             ->find($validated['estado_id']);
@@ -322,7 +314,6 @@ class CreditoController extends Controller
         $alcanzadosOrden = $timeline->pluck('estado.orden')->filter()->all();
         $maxOrden        = empty($alcanzadosOrden) ? 0 : max($alcanzadosOrden);
 
-        // Reglas de avance (6→7 u 8, 7→8, general→max+1)
         $allowedOrden = [];
         if ($maxOrden === 0) {
             $allowedOrden = [1];
@@ -354,6 +345,41 @@ class CreditoController extends Controller
             'created_at' => $entry->created_at?->format('Y-m-d H:i'),
             'message'    => 'Etapa agregada.',
         ], 201);
+    }
+
+    /**
+     * Elimina la última etapa (revertir un avance hecho por error).
+     * Solo permite borrar la etapa más reciente del crédito.
+     */
+    public function removeEstado(int $id, int $estadoCreditoId)
+    {
+        $user    = Auth::user();
+        $credito = Credito::findOrFail($id);
+
+        if (!$user->admin && $credito->asesor_id !== $user->id) {
+            abort(403);
+        }
+
+        $entry = CreditoEstado::where('id', $estadoCreditoId)
+            ->where('credito_id', $id)
+            ->firstOrFail();
+
+        // Verificamos que sea la última etapa registrada
+        $last = CreditoEstado::where('credito_id', $id)
+            ->orderByDesc('created_at')
+            ->first();
+
+        if (!$last || $last->id !== $entry->id) {
+            return response()->json([
+                'message' => 'Solo se puede eliminar la última etapa registrada.',
+            ], 422);
+        }
+
+        $entry->delete();
+
+        return response()->json([
+            'message' => 'Etapa eliminada correctamente.',
+        ]);
     }
 
     public function storeAmortizacion(Request $request, int $id)
@@ -419,7 +445,7 @@ class CreditoController extends Controller
 
     public function show(int $id): Response
     {
-        $user    = Auth::user();
+        $user = Auth::user();
 
         $credito = Credito::with([
             'cliente:id,nombre_cliente,asesor_id',
@@ -434,12 +460,14 @@ class CreditoController extends Controller
 
         return Inertia::render('Creditos/Show', [
             'credito' => [
-                'id'                => $credito->id,
-                'cliente'           => $credito->cliente?->nombre_cliente,
-                'tipo'              => $credito->tipoCredito?->nombre,
-                'garantia'          => $credito->garantia?->nombre,
-                'monto'             => (float) $credito->monto,
-                'plazo'             => (int) $credito->plazo,
+                'id'       => $credito->id,
+                'cliente'  => $credito->cliente?->nombre_cliente,
+                'tipo'     => $credito->tipoCredito?->nombre,
+                'garantia' => $credito->garantia?->nombre,
+                'monto'    => (float) $credito->monto,
+                'plazo'    => (int) $credito->plazo,
+                // fechas ya no son relevantes para el pipeline, pero
+                // podrías seguir mostrándolas si existen en registros históricos
                 'fecha_concesion'   => optional($credito->fecha_concesion)->format('Y-m-d'),
                 'fecha_vencimiento' => optional($credito->fecha_vencimiento)->format('Y-m-d'),
                 'asesor'            => $credito->asesor?->name,

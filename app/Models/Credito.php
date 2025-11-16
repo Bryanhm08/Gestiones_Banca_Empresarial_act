@@ -21,11 +21,11 @@ class Credito extends Model
         'asesor_id',
         'monto',
         'plazo',
-        'fecha_concesion',
-        'fecha_vencimiento',
+        // fecha_concesion y fecha_vencimiento se mantienen en BD para históricos,
+        // pero ya no se asignan masivamente en el pipeline.
     ];
 
-    /** Casts útiles */
+    /** Casts útiles (se conservan para registros históricos) */
     protected $casts = [
         'fecha_concesion'   => 'date',
         'fecha_vencimiento' => 'date',
@@ -55,7 +55,6 @@ class Credito extends Model
      */
     public function asesor()
     {
-        // Usamos FQCN para evitar depender de imports
         return $this->belongsTo(\App\Models\User::class, 'asesor_id');
     }
 

@@ -32,7 +32,7 @@ const form = ref({
   garantia_id: null,
   monto: null,
   plazo: 12,
-  // 👇 ya NO pedimos fecha_concesion; el backend usará hoy()
+  // En el nuevo enfoque de pipeline, ya no se solicita fecha_concesion
   asesor_id: props.isAdmin ? null : props.defaultAsesorId,
 })
 
@@ -47,31 +47,9 @@ const invalid = computed(() => ({
   garantia_id: !required(form.value.garantia_id),
   monto: !(form.value.monto > 0),
   plazo: !(Number(form.value.plazo) >= 1),
-  // asesor_id sólo es requerido para ADMIN
   asesor_id: props.isAdmin ? !required(form.value.asesor_id) : false,
 }))
 const anyInvalid = computed(() => Object.values(invalid.value).some(Boolean))
-
-const formatDate = (d) => {
-  const yyyy = d.getFullYear()
-  const mm = String(d.getMonth() + 1).padStart(2, '0')
-  const dd = String(d.getDate()).padStart(2, '0')
-  return `${yyyy}-${mm}-${dd}`
-}
-
-const concesionHoy = computed(() => formatDate(new Date()))
-
-const fechaVencimientoUI = computed(() => {
-  const p = Number(form.value.plazo || 0)
-  if (!p) return '—'
-  const base = new Date() // hoy
-  const copy = new Date(base.getTime())
-  const month = copy.getMonth() + p
-  copy.setMonth(month)
-  // ajustar fin de mes si cambia el día
-  if (copy.getDate() !== base.getDate()) copy.setDate(0)
-  return formatDate(copy)
-})
 
 watch(form, () => { errors.value = {} }, { deep: true })
 
@@ -97,18 +75,18 @@ const submit = async () => {
       garantia_id: form.value.garantia_id,
       monto: form.value.monto,
       plazo: form.value.plazo,
-      // 👇 NO enviamos fecha_concesion; el servidor usará hoy()
+      // No enviamos fecha_concesion; el servidor sólo guarda datos de pipeline
       asesor_id: form.value.asesor_id,
     })
 
-    toast.add({ severity: 'success', summary: '¡Listo!', detail: 'Crédito creado con éxito.', life: 2200 })
+    toast.add({ severity: 'success', summary: '¡Listo!', detail: 'Operación creada con éxito.', life: 2200 })
     setTimeout(() => router.visit(route('creditos.index')), 600)
   } catch (err) {
     if (err.response?.status === 422) {
       errors.value = err.response.data.errors || {}
       toast.add({ severity: 'error', summary: 'Validación', detail: 'Revisá los campos con error.', life: 3500 })
     } else {
-      toast.add({ severity: 'error', summary: 'Error', detail: 'No se pudo guardar el crédito.', life: 3500 })
+      toast.add({ severity: 'error', summary: 'Error', detail: 'No se pudo guardar la operación.', life: 3500 })
     }
   } finally {
     loading.value = false
@@ -128,14 +106,13 @@ const submit = async () => {
             <div>
               <h1 class="text-3xl font-bold tracking-tight flex items-center gap-3">
                 <Bookmark class="w-8 h-8" />
-                Nuevo Crédito
+                Nueva operación
               </h1>
               <p class="mt-2 text-white/90 max-w-2xl">
-                Completá los datos del crédito. El vencimiento se calcula automáticamente con base en el
-                plazo (la concesión es hoy).
+                Registrá una nueva operación en el pipeline para dar seguimiento al trabajo del asesor y a las etapas del crédito.
               </p>
               <div class="mt-4">
-                <Tag value="Seguro y rápido" class="bg-white/10 text-white border-white/20" />
+                <Tag value="Seguimiento de pipeline" class="bg-white/10 text-white border-white/20" />
               </div>
             </div>
             <Sparkles class="w-20 h-20 opacity-80 hidden md:block" />
@@ -147,7 +124,7 @@ const submit = async () => {
         <template #title>
           <div class="flex items-center gap-2">
             <BadgeDollarSign class="w-5 h-5 text-emerald-600" />
-            <span>Datos del crédito</span>
+            <span>Datos de la operación</span>
           </div>
         </template>
 
@@ -281,8 +258,6 @@ const submit = async () => {
                     {{ new Intl.NumberFormat('es-GT', { style: 'currency', currency: 'GTQ' }).format(form.monto || 0) }}
                   </p>
                   <p><span class="text-gray-500">Plazo:</span> {{ form.plazo || '—' }} meses</p>
-                  <p><span class="text-gray-500">Concesión:</span> {{ concesionHoy }}</p>
-                  <p><span class="text-gray-500">Vencimiento:</span> <strong>{{ fechaVencimientoUI }}</strong></p>
                 </div>
               </template>
             </Card>
@@ -295,7 +270,7 @@ const submit = async () => {
                 </Button>
               </Link>
 
-              <Button :loading="loading" :disabled="loading" @click="submit" v-tooltip.bottom="'Guardar crédito'">
+              <Button :loading="loading" :disabled="loading" @click="submit" v-tooltip.bottom="'Guardar operación'">
                 <Save class="w-4 h-4 mr-2" />
                 Guardar
               </Button>

@@ -23,6 +23,7 @@ class CreditosReporteController extends Controller
             ->with([
                 'cliente:id,nombre_cliente',
                 'tipoCredito:id,nombre',
+                'garantia:id,nombre',
                 'asesor:id,name',
                 'ultimoEstado.estado:id,nombre',
             ]);
@@ -47,16 +48,16 @@ class CreditosReporteController extends Controller
             ->withQueryString()
             ->through(function ($c) {
                 return [
-                    'id'                => $c->id,
-                    'cliente'           => $c->cliente?->nombre_cliente,
-                    'tipo'              => $c->tipoCredito?->nombre,
-                    'monto'             => (float) $c->monto,
-                    'plazo'             => (int) $c->plazo,
-                    'asesor'            => $c->asesor?->name,
-                    'fecha_concesion'   => optional($c->fecha_concesion)->format('Y-m-d'),
-                    'fecha_vencimiento' => optional($c->fecha_vencimiento)->format('Y-m-d'),
-                    'etapa'             => $c->ultimoEstado?->estado?->nombre ?? '—',
-                    'etapa_id'          => $c->ultimoEstado?->estado_id,
+                    'id'       => $c->id,
+                    'cliente'  => $c->cliente?->nombre_cliente,
+                    'tipo'     => $c->tipoCredito?->nombre,
+                    'garantia' => $c->garantia?->nombre,
+                    'monto'    => (float) $c->monto,
+                    'plazo'    => (int) $c->plazo,
+                    'asesor'   => $c->asesor?->name,
+                    // 👇 Ya NO devolvemos fecha_concesion / fecha_vencimiento
+                    'etapa'    => $c->ultimoEstado?->estado?->nombre ?? '—',
+                    'etapa_id' => $c->ultimoEstado?->estado_id,
                 ];
             });
 
@@ -81,6 +82,7 @@ class CreditosReporteController extends Controller
             ->with([
                 'cliente:id,nombre_cliente',
                 'tipoCredito:id,nombre',
+                'garantia:id,nombre',
                 'asesor:id,name',
                 'ultimoEstado.estado:id,nombre',
             ]);
@@ -97,6 +99,7 @@ class CreditosReporteController extends Controller
             });
         }
 
+        // Usa la clase CreditosExport SIN fechas de concesión/vencimiento
         return Excel::download(new CreditosExport($builder), 'reporte_creditos.xlsx');
     }
 }

@@ -14,7 +14,10 @@ class CreditosExport implements FromCollection, WithHeadings, WithMapping, Shoul
 
     public function collection()
     {
-        return $this->builder->orderBy('id')->get();
+        return $this->builder
+            ->with(['cliente', 'tipoCredito', 'garantia', 'asesor', 'ultimoEstado.estado'])
+            ->orderBy('id')
+            ->get();
     }
 
     public function headings(): array
@@ -23,12 +26,14 @@ class CreditosExport implements FromCollection, WithHeadings, WithMapping, Shoul
             'ID',
             'Cliente',
             'Tipo crédito',
+            'Garantía',
             'Monto (Q)',
             'Plazo (meses)',
             'Asesor',
             'Etapa actual',
-            'Fecha concesión',
-            'Fecha vencimiento',
+            // 👇 Fechas eliminadas para el enfoque de pipeline
+            // 'Fecha concesión',
+            // 'Fecha vencimiento',
         ];
     }
 
@@ -38,12 +43,13 @@ class CreditosExport implements FromCollection, WithHeadings, WithMapping, Shoul
             $c->id,
             $c->cliente?->nombre_cliente,
             $c->tipoCredito?->nombre,
+            $c->garantia?->nombre,
             (float) $c->monto,
             (int) $c->plazo,
             $c->asesor?->name,
             $c->ultimoEstado?->estado?->nombre ?? '',
-            optional($c->fecha_concesion)->format('Y-m-d'),
-            optional($c->fecha_vencimiento)->format('Y-m-d'),
+            // optional($c->fecha_concesion)->format('Y-m-d'),
+            // optional($c->fecha_vencimiento)->format('Y-m-d'),
         ];
     }
 }

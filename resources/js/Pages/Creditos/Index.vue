@@ -17,17 +17,6 @@ const rows  = computed(() => {
 })
 const links = computed(() => Array.isArray(props.creditos?.links) ? props.creditos.links : [])
 
-const fmtDate = (s) => {
-  if (!s) return '—'
-  try {
-    const d = new Date(s)
-    if (Number.isNaN(d.getTime())) return s
-    const yyyy = d.getFullYear()
-    const mm   = String(d.getMonth() + 1).padStart(2, '0')
-    const dd   = String(d.getDate()).padStart(2, '0')
-    return `${yyyy}-${mm}-${dd}`
-  } catch { return s }
-}
 const fmtMoney = (n) => {
   const v = Number(n ?? 0)
   return new Intl.NumberFormat('es-GT', { style: 'currency', currency: 'GTQ' }).format(v)
@@ -44,15 +33,15 @@ const go = (url) => { if (url) router.visit(url) }
         <div v-if="canCreate">
           <Link :href="route('creditos.create')"
                 class="inline-flex items-center rounded-lg bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-700">
-            Nuevo crédito
+            Nueva operación
           </Link>
         </div>
       </div>
 
       <div v-if="rows.length === 0" class="rounded-xl border border-dashed p-10 text-center text-gray-500">
-        No hay créditos registrados.
+        No hay operaciones registradas.
         <div v-if="canCreate" class="mt-4">
-          <Link :href="route('creditos.create')" class="text-emerald-700 hover:underline">Crear el primero →</Link>
+          <Link :href="route('creditos.create')" class="text-emerald-700 hover:underline">Crear la primera →</Link>
         </div>
       </div>
 
@@ -66,8 +55,6 @@ const go = (url) => { if (url) router.visit(url) }
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Garantía</th>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plazo</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Concesión</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vencimiento</th>
               <th class="px-4 py-3"></th>
             </tr>
           </thead>
@@ -79,8 +66,6 @@ const go = (url) => { if (url) router.visit(url) }
               <td class="px-4 py-3">{{ c.garantia?.nombre || '—' }}</td>
               <td class="px-4 py-3 font-medium">{{ fmtMoney(c.monto) }}</td>
               <td class="px-4 py-3">{{ c.plazo ?? '—' }} mes(es)</td>
-              <td class="px-4 py-3">{{ fmtDate(c.fecha_concesion) }}</td>
-              <td class="px-4 py-3">{{ fmtDate(c.fecha_vencimiento) }}</td>
               <td class="px-4 py-3 text-right">
                 <div class="inline-flex items-center gap-2">
                   <Link :href="route('creditos.edit', c.id)"

@@ -10,7 +10,18 @@ import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Divider from 'primevue/divider'
 
-import { Wallet2, Users, CreditCard, BarChart3, ArrowRight, CalendarDays, AlertTriangle, Plus } from 'lucide-vue-next'
+import {
+    Wallet2,
+    Users,
+    CreditCard,
+    BarChart3,
+    ArrowRight,
+    CalendarDays,
+    AlertTriangle,
+    Plus,
+    Activity,
+    PieChart
+} from 'lucide-vue-next'
 
 const props = defineProps({
     stats: Object,
@@ -19,23 +30,33 @@ const props = defineProps({
     recentClientes: Array,
     isAdmin: Boolean,
     isAsesor: Boolean,
+    resumenVigentesMes: {
+        type: Object,
+        default: () => ({
+            rango: {},
+            totales: {},
+            por_estado: [],
+            movimientos_por_estado: [],
+        }),
+    },
 })
 
 const page = usePage()
 const ab = page.props.abilities || {}
 const user = page.props.auth.user || {}
 
-const money = (n) => new Intl.NumberFormat('es-GT', { style: 'currency', currency: 'GTQ' }).format(Number(n || 0))
-const kpis = computed(() => ([
+const money = (n) =>
+    new Intl.NumberFormat('es-GT', { style: 'currency', currency: 'GTQ' }).format(Number(n || 0))
+
+const kpis = computed(() => [
     { label: 'Clientes', value: props.stats?.clientes ?? 0, icon: Users, to: 'clientes.index', show: ab.canClientes || props.isAdmin },
-    { label: 'Cuentas', value: props.stats?.cuentas ?? 0, icon: Wallet2, to: 'cuentas.index', show: ab.canClientes || props.isAdmin},
+    { label: 'Cuentas', value: props.stats?.cuentas ?? 0, icon: Wallet2, to: 'cuentas.index', show: ab.canClientes || props.isAdmin },
     { label: 'Créditos', value: props.stats?.creditos ?? 0, icon: CreditCard, to: 'creditos.index', show: true },
     { label: 'Monto', value: money(props.stats?.montoTotal ?? 0), icon: BarChart3, to: 'creditos.index', show: true },
-]))
+])
 </script>
 
 <template>
-
     <Head title="Dashboard" />
 
     <AuthenticatedLayout>
@@ -44,12 +65,12 @@ const kpis = computed(() => ([
                 <h2 class="text-xl font-semibold leading-tight text-gray-800">Dashboard</h2>
                 <div class="flex gap-2">
                     <Link :href="route('mis.asignaciones')">
-                    <Button outlined size="small">Mis asignaciones</Button>
+                        <Button outlined size="small">Mis asignaciones</Button>
                     </Link>
                     <Link :href="route('creditos.create')">
-                    <Button size="small" class="bg-blue-600 hover:bg-blue-700 text-white">
-                        <Plus class="w-4 h-4 mr-1" /> Nuevo crédito
-                    </Button>
+                        <Button size="small" class="bg-blue-600 hover:bg-blue-700 text-white">
+                            <Plus class="w-4 h-4 mr-1" /> Nuevo crédito
+                        </Button>
                     </Link>
                 </div>
             </div>
@@ -63,21 +84,37 @@ const kpis = computed(() => ([
                             <p class="text-sm text-gray-500">Bienvenido,</p>
                             <h1 class="text-2xl font-semibold text-gray-800">{{ user?.name }}</h1>
                             <p class="text-sm text-gray-500 mt-1">
-                                Rol: <span class="font-medium">{{ props.isAdmin ? 'Administrador' : (props.isAsesor ?
-                                    'Asesor' : 'Usuario') }}</span>
+                                Rol:
+                                <span class="font-medium">
+                                    {{
+                                        props.isAdmin
+                                            ? 'Administrador'
+                                            : props.isAsesor
+                                            ? 'Asesor'
+                                            : 'Usuario'
+                                    }}
+                                </span>
                             </p>
                         </div>
                         <div class="flex gap-2">
-                            <Tag v-if="ab.mod_credit_reports" value="Reportes de créditos"
-                                class="bg-indigo-50 text-indigo-700 border-indigo-200" />
-                            <Tag v-if="ab.mod_accounts_report" value="Reportería de cuentas"
-                                class="bg-emerald-50 text-emerald-700 border-emerald-200" />
+                            <Tag
+                                v-if="ab.mod_credit_reports"
+                                value="Reportes de créditos"
+                                class="bg-indigo-50 text-indigo-700 border-indigo-200"
+                            />
+                            <Tag
+                                v-if="ab.mod_accounts_report"
+                                value="Reportería de cuentas"
+                                class="bg-emerald-50 text-emerald-700 border-emerald-200"
+                            />
                         </div>
                     </div>
                 </template>
             </Card>
+
+            <!-- KPIs -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card v-for="(k, i) in kpis.filter(x => x.show)" :key="i" class="rounded-2xl shadow-sm">
+                <Card v-for="(k, i) in kpis.filter((x) => x.show)" :key="i" class="rounded-2xl shadow-sm">
                     <template #content>
                         <div class="flex items-center justify-between">
                             <div>
@@ -87,14 +124,137 @@ const kpis = computed(() => ([
                             <component :is="k.icon" class="w-6 h-6 text-gray-500" />
                         </div>
                         <Divider />
-                        <Link :href="route(k.to)"
-                            class="text-sm text-blue-700 hover:underline inline-flex items-center">
-                        Ver módulo
-                        <ArrowRight class="w-4 h-4 ml-1" />
+                        <Link
+                            :href="route(k.to)"
+                            class="text-sm text-blue-700 hover:underline inline-flex items-center"
+                        >
+                            Ver módulo
+                            <ArrowRight class="w-4 h-4 ml-1" />
                         </Link>
                     </template>
                 </Card>
             </div>
+
+            <!-- NUEVO: Resumen mensual de casos vigentes -->
+            <Card class="rounded-2xl shadow-sm">
+                <template #title>
+                    <div class="flex items-center gap-2">
+                        <Activity class="w-4 h-4 text-gray-600" />
+                        <span>
+                            Resumen de casos vigentes –
+                            {{ props.resumenVigentesMes?.rango?.mes || 'Mes actual' }}
+                        </span>
+                    </div>
+                </template>
+                <template #content>
+                    <!-- Totales -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                        <div class="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+                            <div class="text-xs text-gray-500">Créditos vigentes</div>
+                            <div class="mt-1 text-xl font-semibold text-gray-800">
+                                {{ props.resumenVigentesMes?.totales?.creditos_vigentes ?? 0 }}
+                            </div>
+                        </div>
+                        <div class="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+                            <div class="text-xs text-gray-500">Monto vigente</div>
+                            <div class="mt-1 text-xl font-semibold text-gray-800">
+                                {{ money(props.resumenVigentesMes?.totales?.monto_vigente || 0) }}
+                            </div>
+                        </div>
+                        <div class="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+                            <div class="text-xs text-gray-500">Nuevos en el mes</div>
+                            <div class="mt-1 text-xl font-semibold text-gray-800">
+                                {{ props.resumenVigentesMes?.totales?.nuevos_mes ?? 0 }}
+                            </div>
+                        </div>
+                        <div class="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+                            <div class="text-xs text-gray-500">Créditos con movimientos</div>
+                            <div class="mt-1 text-xl font-semibold text-gray-800">
+                                {{
+                                    props.resumenVigentesMes?.totales?.creditos_con_movimientos_mes ??
+                                    0
+                                }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <Divider />
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Distribución por etapa actual -->
+                        <div>
+                            <div class="flex items-center gap-2 mb-2">
+                                <PieChart class="w-4 h-4 text-gray-600" />
+                                <span class="text-sm font-medium text-gray-700">
+                                    Créditos vigentes por etapa actual
+                                </span>
+                            </div>
+
+                            <DataTable
+                                :value="props.resumenVigentesMes?.por_estado || []"
+                                dataKey="estado"
+                                class="text-sm"
+                                :rows="5"
+                                paginator
+                            >
+                                <Column field="estado" header="Etapa" />
+                                <Column field="creditos" header="Créditos" style="width: 120px" />
+                                <Column header="Monto" style="width: 180px">
+                                    <template #body="{ data }">
+                                        {{ money(data.monto || 0) }}
+                                    </template>
+                                </Column>
+                            </DataTable>
+
+                            <div
+                                v-if="(props.resumenVigentesMes?.por_estado || []).length === 0"
+                                class="text-sm text-gray-500 mt-3"
+                            >
+                                No hay créditos vigentes registrados en el mes.
+                            </div>
+                        </div>
+
+                        <!-- Movimientos de etapa en el mes -->
+                        <div>
+                            <div class="flex items-center gap-2 mb-2">
+                                <Activity class="w-4 h-4 text-gray-600" />
+                                <span class="text-sm font-medium text-gray-700">
+                                    Movimientos de etapa en el mes
+                                </span>
+                            </div>
+
+                            <DataTable
+                                :value="props.resumenVigentesMes?.movimientos_por_estado || []"
+                                dataKey="estado"
+                                class="text-sm"
+                                :rows="5"
+                                paginator
+                            >
+                                <Column field="estado" header="Etapa" />
+                                <Column
+                                    field="movimientos"
+                                    header="Movimientos"
+                                    style="width: 130px"
+                                />
+                                <Column
+                                    field="creditos"
+                                    header="Créditos impactados"
+                                    style="width: 150px"
+                                />
+                            </DataTable>
+
+                            <div
+                                v-if="(props.resumenVigentesMes?.movimientos_por_estado || []).length === 0"
+                                class="text-sm text-gray-500 mt-3"
+                            >
+                                No se registran movimientos de etapa en el mes.
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </Card>
+
+            <!-- Próximos vencimientos + Pendientes -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <Card class="rounded-2xl shadow-sm lg:col-span-2">
                     <template #title>
@@ -107,17 +267,25 @@ const kpis = computed(() => ([
                         <DataTable :value="upcomingVenc" dataKey="id" paginator :rows="5" class="text-sm">
                             <Column field="id" header="Crédito" style="width: 90px" />
                             <Column field="cliente" header="Cliente" />
-                            <Column field="fecha_vencimiento" header="Vencimiento" style="width: 140px" />
+                            <Column
+                                field="fecha_vencimiento"
+                                header="Vencimiento"
+                                style="width: 140px"
+                            />
                             <Column field="monto" header="Monto" style="width: 160px">
-                                <template #body="{ data }">{{ new
-                                    Intl.NumberFormat('es-GT', { style: 'currency', currency: 'GTQ' }).format(data.monto
-                                        || 0)
-                                    }}</template>
+                                <template #body="{ data }">
+                                    {{
+                                        new Intl.NumberFormat('es-GT', {
+                                            style: 'currency',
+                                            currency: 'GTQ',
+                                        }).format(data.monto || 0)
+                                    }}
+                                </template>
                             </Column>
                             <Column header="Acciones" style="width: 120px">
                                 <template #body="{ data }">
                                     <Link :href="route('creditos.edit', data.id)">
-                                    <Button size="small" outlined>Gestionar</Button>
+                                        <Button size="small" outlined>Gestionar</Button>
                                     </Link>
                                 </template>
                             </Column>
@@ -128,6 +296,7 @@ const kpis = computed(() => ([
                         </div>
                     </template>
                 </Card>
+
                 <Card class="rounded-2xl shadow-sm">
                     <template #title>
                         <div class="flex items-center gap-2">
@@ -137,30 +306,42 @@ const kpis = computed(() => ([
                     </template>
                     <template #content>
                         <ul class="space-y-3">
-                            <li v-for="a in pendingAmort" :key="a.id" class="flex items-center justify-between">
+                            <li
+                                v-for="a in pendingAmort"
+                                :key="a.id"
+                                class="flex items-center justify-between"
+                            >
                                 <div class="text-sm">
                                     Amortización <span class="font-medium">#{{ a.id }}</span>
                                     <span class="text-gray-500"> · Crédito {{ a.credito_id }}</span>
                                 </div>
-                                <Tag :value="a.fecha_pago" class="bg-amber-50 text-amber-700 border-amber-200" />
+                                <Tag
+                                    :value="a.fecha_pago"
+                                    class="bg-amber-50 text-amber-700 border-amber-200"
+                                />
                             </li>
                         </ul>
-                        <div v-if="pendingAmort.length === 0" class="text-sm text-gray-500">Sin pendientes inmediatos.
+                        <div v-if="pendingAmort.length === 0" class="text-sm text-gray-500">
+                            Sin pendientes inmediatos.
                         </div>
 
                         <Divider class="my-4" />
                         <div class="space-y-2">
                             <Link :href="route('mis.asignaciones')">
-                            <Button class="w-full" outlined>Ir a Mis asignaciones</Button>
+                                <Button class="w-full" outlined>Ir a Mis asignaciones</Button>
                             </Link>
-                            <Link v-if="props.isAdmin && (ab.mod_credit_reports || ab.mod_accounts_report)"
-                                :href="route('reportes.index')">
-                            <Button class="w-full" outlined>Centro de reportes</Button>
+                            <Link
+                                v-if="props.isAdmin && (ab.mod_credit_reports || ab.mod_accounts_report)"
+                                :href="route('reportes.index')"
+                            >
+                                <Button class="w-full" outlined>Centro de reportes</Button>
                             </Link>
                         </div>
                     </template>
                 </Card>
             </div>
+
+            <!-- Últimos clientes -->
             <Card v-if="ab.canClientes || props.isAdmin" class="rounded-2xl shadow-sm">
                 <template #title>
                     <div class="flex items-center gap-2">
@@ -178,12 +359,12 @@ const kpis = computed(() => ([
                     </DataTable>
                     <div class="mt-4 flex gap-2">
                         <Link :href="route('clientes.create')">
-                        <Button class="bg-emerald-600 hover:bg-emerald-700 text-white">
-                            Registrar cliente
-                        </Button>
+                            <Button class="bg-emerald-600 hover:bg-emerald-700 text-white">
+                                Registrar cliente
+                            </Button>
                         </Link>
                         <Link :href="route('clientes.index')">
-                        <Button outlined>Ver módulo</Button>
+                            <Button outlined>Ver módulo</Button>
                         </Link>
                     </div>
                 </template>

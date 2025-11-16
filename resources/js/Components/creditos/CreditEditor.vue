@@ -1,347 +1,492 @@
 <script setup>
-import { ref, computed } from 'vue'
-import axios from 'axios'
-import { router } from '@inertiajs/vue3'
-import Card from 'primevue/card'
-import Button from 'primevue/button'
-import InputNumber from 'primevue/inputnumber'
-import Calendar from 'primevue/calendar'
-import Dropdown from 'primevue/dropdown'
-import Divider from 'primevue/divider'
-import Tag from 'primevue/tag'
-import DataTable from 'primevue/datatable'
-import Column from 'primevue/column'
-import Timeline from 'primevue/timeline'
-import Toast from 'primevue/toast'
-import { useToast } from 'primevue/usetoast'
-import ConfirmDialog from 'primevue/confirmdialog'
-import { useConfirm } from 'primevue/useconfirm'
-import {
-  ArrowLeft, Plus, X, CalendarDays, BadgeDollarSign, Shield, User, Layers,
-  Circle, FilePlus2, Search, Users, FileCheck, Wallet, Banknote, XCircle
-} from 'lucide-vue-next'
+import { computed, ref } from 'vue'
+import { useForm, router } from '@inertiajs/vue3'
+
+import PrimaryButton from '@/Components/PrimaryButton.vue'
+import InputLabel from '@/Components/InputLabel.vue'
+import TextInput from '@/Components/TextInput.vue'
+import InputError from '@/Components/InputError.vue'
 
 const props = defineProps({
-  credito: { type: Object, required: true },
-  tipos: { type: Array, default: () => [] },
-  garantias: { type: Array, default: () => [] },
-  estadosCatalog: { type: Array, default: () => [] },
-  timeline: { type: Array, default: () => [] },
-  amortizaciones: { type: Array, default: () => [] },
-  isAdmin: { type: Boolean, default: false },
-})
-
-const toast = useToast()
-const confirm = useConfirm()
-
-const form = ref({
-  tipo_credito_id: props.credito.tipo_credito_id ?? null,
-  garantia_id: props.credito.garantia_id ?? null,
-  monto: props.credito.monto,
-  plazo: props.credito.plazo,
-  fecha_concesion: props.credito.fecha_concesion ? new Date(props.credito.fecha_concesion) : null,
-})
-
-const formatDate = (d) => {
-  if (!d) return null
-  const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
-
-const resumenVencimiento = computed(() => {
-  const d = form.value.fecha_concesion
-  const p = Number(form.value.plazo || 0)
-  if (!d || !p) return props.credito.fecha_vencimiento || '—'
-  const copy = new Date(d.getTime())
-  copy.setMonth(copy.getMonth() + p)
-  if (copy.getDate() !== d.getDate()) copy.setDate(0)
-  return formatDate(copy)
-})
-
-const money = (n) => new Intl.NumberFormat('es-GT', { style: 'currency', currency: 'GTQ' }).format(Number(n || 0))
-
-// ————— Timeline / Etapas —————
-const estados = ref([...props.timeline])
-const nuevoEstadoId = ref(null)
-const addingStage = ref(false)
-
-const addEstado = async () => {
-  if (!nuevoEstadoId.value) {
-    toast.add({ severity: 'warn', summary: 'Etapa', detail: 'Seleccioná una etapa.', life: 2000 })
-    return
-  }
-  try {
-    addingStage.value = true
-    const { data } = await axios.post(route('creditos.estado.add', props.credito.id), { estado_id: nuevoEstadoId.value })
-    estados.value = [...estados.value, data]
-    nuevoEstadoId.value = null
-    toast.add({ severity: 'success', summary: 'Etapa agregada', detail: data.estado, life: 1800 })
-    requestAnimationFrame(() => {
-      const scroller = document.getElementById('timeline-scroller')
-      if (scroller) scroller.scrollLeft = scroller.scrollWidth
-    })
-  } catch {
-    toast.add({ severity: 'error', summary: 'Error', detail: 'No se pudo agregar la etapa.', life: 2400 })
-  } finally {
-    addingStage.value = false
-  }
-}
-
-const stageMeta = (name = '') => {
-  const n = (name || '').toLowerCase()
-  if (n.includes('sin estado')) return { Icon: Circle, chip: 'bg-gray-50 text-gray-700 border-gray-200', dot: 'bg-gray-400' }
-  if (n.includes('solicitud')) return { Icon: FilePlus2, chip: 'bg-indigo-50 text-indigo-700 border-indigo-200', dot: 'bg-indigo-500' }
-  if (n.includes('análisis') || n.includes('analisis')) return { Icon: Search, chip: 'bg-sky-50 text-sky-700 border-sky-200', dot: 'bg-sky-500' }
-  if (n.includes('comité') || n.includes('comite')) return { Icon: Users, chip: 'bg-violet-50 text-violet-700 border-violet-200', dot: 'bg-violet-500' }
-  if (n.includes('formalización') || n.includes('formalizacion')) return { Icon: FileCheck, chip: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' }
-  if (n.includes('asignado desembolso')) return { Icon: Wallet, chip: 'bg-cyan-50 text-cyan-700 border-cyan-200', dot: 'bg-cyan-500' }
-  if (n.includes('desembolsado')) return { Icon: Banknote, chip: 'bg-green-50 text-green-700 border-green-200', dot: 'bg-green-600' }
-  if (n.includes('desistido')) return { Icon: XCircle, chip: 'bg-rose-50 text-rose-700 border-rose-200', dot: 'bg-rose-500' }
-  return { Icon: Circle, chip: 'bg-gray-50 text-gray-700 border-gray-200', dot: 'bg-gray-400' }
-}
-
-// ————— Amortizaciones —————
-const amortis = ref([...props.amortizaciones])
-const nuevaFecha = ref(null)
-const addingAmorti = ref(false)
-
-const addAmortizacion = async () => {
-  if (!nuevaFecha.value) {
-    toast.add({ severity: 'warn', summary: 'Amortización', detail: 'Seleccioná una fecha.', life: 2000 })
-    return
-  }
-  try {
-    addingAmorti.value = true
-    const { data } = await axios.post(route('creditos.amortizaciones.store', props.credito.id), {
-      fecha_pago: formatDate(nuevaFecha.value),
-      status: 'Pendiente',
-    })
-    amortis.value = [...amortis.value, data]
-    nuevaFecha.value = null
-    toast.add({ severity: 'success', summary: 'Añadida', detail: 'Amortización creada.', life: 1800 })
-  } catch {
-    toast.add({ severity: 'error', summary: 'Error', detail: 'No se pudo crear.', life: 2400 })
-  } finally {
-    addingAmorti.value = false
-  }
-}
-
-const toggleAmortizacion = async (row) => {
-  try {
-    const { data } = await axios.patch(route('amortizaciones.toggle', row.id))
-    row.status = data.status
-    toast.add({ severity: 'success', summary: 'Actualizado', detail: `Estado: ${row.status}`, life: 1600 })
-  } catch {
-    toast.add({ severity: 'error', summary: 'Error', detail: 'No se pudo actualizar.', life: 2400 })
-  }
-}
-
-const deleteAmortizacion = (row) => {
-  confirm.require({
-    message: '¿Eliminar esta amortización?',
-    header: 'Confirmar',
-    acceptLabel: 'Sí, eliminar',
-    rejectLabel: 'Cancelar',
-    accept: async () => {
-      try {
-        await axios.delete(route('amortizaciones.destroy', row.id))
-        amortis.value = amortis.value.filter(a => a.id !== row.id)
-        toast.add({ severity: 'success', summary: 'Eliminada', detail: 'Amortización eliminada.', life: 1600 })
-      } catch {
-        toast.add({ severity: 'error', summary: 'Error', detail: 'No se pudo eliminar.', life: 2400 })
-      }
+    credito: {
+        type: Object,
+        required: true,
     },
-  })
+    tipos: {
+        type: Array,
+        required: true,
+    },
+    garantias: {
+        type: Array,
+        required: true,
+    },
+    estadosCatalog: {
+        type: Array,
+        required: true,
+    },
+    timeline: {
+        type: Array,
+        required: true,
+    },
+    amortizaciones: {
+        type: Array,
+        required: true,
+    },
+    isAdmin: {
+        type: Boolean,
+        default: false,
+    },
+})
+
+// =============== FORM DATOS DEL CRÉDITO ==================
+
+const form = useForm({
+    tipo_credito_id: props.credito.tipo_credito_id,
+    garantia_id: props.credito.garantia_id,
+    monto: props.credito.monto,
+    plazo: props.credito.plazo,
+    // fecha_concesion / fecha_vencimiento ya no se editan en el pipeline
+})
+
+const guardarDatosCredito = () => {
+    form.patch(route('creditos.update', props.credito.id), {
+        preserveScroll: true,
+    })
+}
+
+// ================== ETAPAS DEL CRÉDITO ==================
+
+const nuevaEtapaId = ref(null)
+const estadosDisponibles = computed(() => props.estadosCatalog ?? [])
+
+const agregarEtapa = () => {
+    if (!nuevaEtapaId.value) return
+
+    window.axios
+        .post(route('creditos.estado.add', props.credito.id), {
+            estado_id: nuevaEtapaId.value,
+        })
+        .then(() => {
+            nuevaEtapaId.value = null
+            router.reload({
+                only: ['timeline', 'estadosCatalog'],
+                preserveScroll: true,
+            })
+        })
+        .catch((error) => {
+            console.error('Error al agregar etapa', error)
+        })
+}
+
+const revertirEtapa = (item) => {
+    if (!confirm('¿Deseás eliminar la última etapa registrada?')) return
+
+    window.axios
+        .delete(
+            route('creditos.estado.remove', {
+                id: props.credito.id,
+                estadoId: item.id,
+            }),
+        )
+        .then(() => {
+            router.reload({
+                only: ['timeline', 'estadosCatalog'],
+                preserveScroll: true,
+            })
+        })
+        .catch((error) => {
+            console.error('Error al eliminar etapa', error)
+        })
+}
+
+// ================== AMORTIZACIONES ==================
+
+const amortForm = ref({
+    fecha_pago: '',
+    status: 'Pendiente',
+})
+
+const amortErrors = ref({})
+
+const agregarAmortizacion = () => {
+    amortErrors.value = {}
+
+    if (!amortForm.value.fecha_pago) {
+        amortErrors.value.fecha_pago = ['La fecha de pago es obligatoria.']
+        return
+    }
+
+    window.axios
+        .post(route('creditos.amortizaciones.store', props.credito.id), {
+            fecha_pago: amortForm.value.fecha_pago,
+            status: amortForm.value.status,
+        })
+        .then(() => {
+            amortForm.value.fecha_pago = ''
+            amortForm.value.status = 'Pendiente'
+
+            router.reload({
+                only: ['amortizaciones'],
+                preserveScroll: true,
+            })
+        })
+        .catch((error) => {
+            if (error.response && error.response.status === 422) {
+                amortErrors.value = error.response.data.errors || {}
+            } else {
+                console.error('Error al agregar amortización', error)
+            }
+        })
+}
+
+// Cambiar estado Pagado / Pendiente
+const toggleAmortizacionStatus = (amort) => {
+    window.axios
+        .patch(route('amortizaciones.toggle', amort.id))
+        .then(() => {
+            router.reload({
+                only: ['amortizaciones'],
+                preserveScroll: true,
+            })
+        })
+        .catch((error) => {
+            console.error('Error al cambiar estado de amortización', error)
+        })
+}
+
+// Eliminar amortización
+const eliminarAmortizacion = (amort) => {
+    if (!confirm('¿Deseás eliminar esta amortización?')) return
+
+    window.axios
+        .delete(route('amortizaciones.destroy', amort.id))
+        .then(() => {
+            router.reload({
+                only: ['amortizaciones'],
+                preserveScroll: true,
+            })
+        })
+        .catch((error) => {
+            console.error('Error al eliminar amortización', error)
+        })
 }
 </script>
 
 <template>
-  <div class="max-w-6xl mx-auto p-6 space-y-6">
-    <Toast />
-    <ConfirmDialog />
-
-    <div class="flex items-start justify-between">
-      <div>
-        <h1 class="text-xl font-semibold tracking-tight flex items-center gap-2">
-          <Layers class="w-5 h-5 text-gray-700" />
-          Editar crédito #{{ credito.id }}
-        </h1>
-        <p class="text-sm text-gray-500 mt-1">
-          Cliente: <span class="font-medium text-gray-700">{{ credito.cliente }}</span> ·
-          Asesor: <span class="font-medium text-gray-700">{{ credito.asesor }}</span>
-        </p>
-      </div>
-      <div class="flex gap-2">
-        <Button outlined @click="router.visit(route('creditos.index'))">
-          <ArrowLeft class="w-4 h-4 mr-2" /> Volver
-        </Button>
-        <!-- Botón Guardar eliminado a solicitud -->
-      </div>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-      <Card class="rounded-xl shadow-sm"><template #content>
-        <div class="text-xs text-gray-500">Monto</div>
-        <div class="text-lg font-semibold">{{ money(form.monto) }}</div>
-      </template></Card>
-      <Card class="rounded-xl shadow-sm"><template #content>
-        <div class="text-xs text-gray-500">Plazo</div>
-        <div class="text-lg font-semibold">{{ form.plazo }} meses</div>
-      </template></Card>
-      <Card class="rounded-xl shadow-sm"><template #content>
-        <div class="text-xs text-gray-500">Concesión</div>
-        <div class="text-lg font-semibold">{{ formatDate(form.fecha_concesion) || '—' }}</div>
-      </template></Card>
-      <Card class="rounded-xl shadow-sm"><template #content>
-        <div class="text-xs text-gray-500">Vencimiento</div>
-        <div class="text-lg font-semibold">{{ resumenVencimiento }}</div>
-      </template></Card>
-    </div>
-
-    <Card class="rounded-2xl shadow-sm">
-      <template #title>
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <Layers class="w-4 h-4 text-gray-600" />
-            <span>Etapas del crédito</span>
-          </div>
-          <div class="flex gap-2">
-            <Dropdown v-model="nuevoEstadoId" :options="estadosCatalog" optionLabel="nombre"
-              optionValue="id" placeholder="Seleccioná etapa" class="w-56" />
-            <Button :loading="addingStage" @click="addEstado">
-              <Plus class="w-4 h-4 mr-1" /> Agregar
-            </Button>
-          </div>
-        </div>
-      </template>
-      <template #content>
-        <div id="timeline-scroller" class="overflow-x-auto pb-2">
-          <div class="min-w-max pr-2">
-            <Timeline :value="estados" layout="horizontal" class="w-full">
-              <template #marker="slotProps">
-                <span class="flex items-center justify-center w-7 h-7 rounded-full ring-2 ring-white shadow"
-                      :class="stageMeta(slotProps.item.estado).dot">
-                  <component :is="stageMeta(slotProps.item.estado).Icon" class="w-4 h-4 text-white" />
-                </span>
-              </template>
-              <template #opposite="slotProps">
-                <div class="text-[11px] text-gray-500 font-medium">
-                  {{ slotProps.item.created_at || '—' }}
-                </div>
-              </template>
-              <template #content="slotProps">
-                <div class="inline-flex items-center gap-2 border rounded-full px-3 py-1 text-sm"
-                     :class="stageMeta(slotProps.item.estado).chip">
-                  <component :is="stageMeta(slotProps.item.estado).Icon" class="w-4 h-4" />
-                  <span class="whitespace-nowrap">{{ slotProps.item.estado }}</span>
-                </div>
-              </template>
-            </Timeline>
-          </div>
+    <div class="max-w-6xl mx-auto py-8 space-y-8">
+        <!-- Encabezado -->
+        <div class="flex items-center justify-between gap-4">
+            <div>
+                <h1 class="text-2xl font-semibold text-slate-800">
+                    Editar crédito #{{ credito.id }}
+                </h1>
+                <p class="text-sm text-slate-500">
+                    Cliente:
+                    <span class="font-medium">{{ credito.cliente }}</span>
+                    <span v-if="credito.asesor" class="ml-2 text-xs text-slate-400">
+                        · Asesor: {{ credito.asesor }}
+                    </span>
+                </p>
+            </div>
         </div>
 
-        <div v-if="estados.length === 0" class="text-sm text-gray-500 mt-2">Aún no hay etapas.</div>
-      </template>
-    </Card>
+        <div class="grid gap-6 md:grid-cols-3">
+            <!-- ================= DATOS DEL CRÉDITO ================= -->
+            <section
+                class="md:col-span-2 bg-white shadow-sm rounded-2xl p-6 border border-slate-100"
+            >
+                <h2 class="text-lg font-semibold text-slate-800 mb-4">
+                    Datos del crédito
+                </h2>
 
-    <!-- Grid a 2 columnas para que Amortizaciones sea más ancha -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <Card class="rounded-2xl shadow-sm lg:col-span-1">
-        <template #title>
-          <div class="flex items-center gap-2">
-            <User class="w-4 h-4 text-gray-600" />
-            <span>Datos del crédito</span>
-          </div>
-        </template>
-        <template #content>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div>
-              <label class="text-sm text-gray-700 flex items-center gap-2 mb-1">
-                <Shield class="w-4 h-4" /> Tipo de crédito
-              </label>
-              <Dropdown v-model="form.tipo_credito_id" :options="tipos" optionLabel="nombre"
-                        optionValue="id" placeholder="Seleccioná el tipo" class="w-full" filter />
-            </div>
+                <div class="grid gap-4 md:grid-cols-2">
+                    <!-- Cliente (solo lectura) -->
+                    <div class="md:col-span-2">
+                        <InputLabel value="Cliente" />
+                        <div
+                            class="mt-1 text-sm font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2"
+                        >
+                            {{ credito.cliente }}
+                        </div>
+                    </div>
 
-            <div>
-              <label class="text-sm text-gray-700 flex items-center gap-2 mb-1">
-                <Shield class="w-4 h-4" /> Garantía
-              </label>
-              <Dropdown v-model="form.garantia_id" :options="garantias" optionLabel="nombre"
-                        optionValue="id" placeholder="Seleccioná la garantía" class="w-full" filter />
-            </div>
+                    <!-- Tipo de crédito -->
+                    <div>
+                        <InputLabel for="tipo_credito_id" value="Tipo de crédito" />
+                        <select
+                            id="tipo_credito_id"
+                            v-model="form.tipo_credito_id"
+                            class="mt-1 block w-full rounded-lg border-slate-300 text-sm"
+                        >
+                            <option disabled value="">Seleccioná un tipo</option>
+                            <option v-for="t in tipos" :key="t.id" :value="t.id">
+                                {{ t.nombre }}
+                            </option>
+                        </select>
+                        <InputError class="mt-1" :message="form.errors.tipo_credito_id" />
+                    </div>
 
-            <div>
-              <label class="text-sm text-gray-700 flex items-center gap-2 mb-1">
-                <BadgeDollarSign class="w-4 h-4" /> Monto
-              </label>
-              <InputNumber v-model="form.monto" mode="currency" currency="GTQ" locale="es-GT" class="w-full" />
-            </div>
+                    <!-- Garantía -->
+                    <div>
+                        <InputLabel for="garantia_id" value="Garantía" />
+                        <select
+                            id="garantia_id"
+                            v-model="form.garantia_id"
+                            class="mt-1 block w-full rounded-lg border-slate-300 text-sm"
+                        >
+                            <option disabled value="">Seleccioná una garantía</option>
+                            <option v-for="g in garantias" :key="g.id" :value="g.id">
+                                {{ g.nombre }}
+                            </option>
+                        </select>
+                        <InputError class="mt-1" :message="form.errors.garantia_id" />
+                    </div>
 
-            <div>
-              <label class="text-sm text-gray-700 flex items-center gap-2 mb-1">
-                <CalendarDays class="w-4 h-4" /> Plazo (meses)
-              </label>
-              <InputNumber v-model="form.plazo" :min="1" :max="360" showButtons class="w-full" />
-            </div>
+                    <!-- Monto -->
+                    <div>
+                        <InputLabel for="monto" value="Monto" />
+                        <TextInput
+                            id="monto"
+                            v-model="form.monto"
+                            type="number"
+                            step="0.01"
+                            class="mt-1 block w-full"
+                        />
+                        <InputError class="mt-1" :message="form.errors.monto" />
+                    </div>
 
-            <div>
-              <label class="text-sm text-gray-700 flex items-center gap-2 mb-1">
-                <CalendarDays class="w-4 h-4" /> Fecha de concesión
-              </label>
-              <Calendar v-model="form.fecha_concesion" dateFormat="yy-mm-dd" :showIcon="true" showButtonBar class="w-full" />
-            </div>
-          </div>
-        </template>
-      </Card>
-
-      <!-- Amortizaciones con más ancho (50% en desktop) -->
-      <Card class="rounded-2xl shadow-sm lg:col-span-1">
-        <template #title>
-          <div class="flex items-center gap-2">
-            <CalendarDays class="w-4 h-4 text-gray-600" />
-            <span>Amortizaciones</span>
-          </div>
-        </template>
-        <template #content>
-          <div class="flex items-center gap-3 mb-3">
-            <Calendar v-model="nuevaFecha" dateFormat="yy-mm-dd" :showIcon="true" class="w-52" />
-            <Button :loading="addingAmorti" @click="addAmortizacion">
-              <Plus class="w-4 h-4 mr-1" /> Añadir
-            </Button>
-          </div>
-
-          <DataTable :value="amortis" dataKey="id" paginator :rows="5" class="text-sm">
-            <Column field="fecha_pago" header="Fecha" style="width: 140px" />
-            <Column field="status" header="Estado" style="width: 120px">
-              <template #body="{ data }">
-                <Tag :value="data.status" :class="data.status === 'Pagado'
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                    : 'bg-amber-50 text-amber-700 border-amber-200'" />
-              </template>
-            </Column>
-            <Column header="Acciones" style="width: 180px">
-              <template #body="{ data }">
-                <div class="flex gap-2">
-                  <Button size="small" outlined @click="toggleAmortizacion(data)">Toggle</Button>
-                  <Button size="small" outlined severity="danger" @click="deleteAmortizacion(data)">
-                    <X class="w-4 h-4 mr-1" /> Eliminar
-                  </Button>
+                    <!-- Plazo -->
+                    <div>
+                        <InputLabel for="plazo" value="Plazo (meses)" />
+                        <TextInput
+                            id="plazo"
+                            v-model="form.plazo"
+                            type="number"
+                            class="mt-1 block w-full"
+                        />
+                        <InputError class="mt-1" :message="form.errors.plazo" />
+                    </div>
                 </div>
-              </template>
-            </Column>
-          </DataTable>
-        </template>
-      </Card>
+
+                <div class="mt-6 flex justify-end">
+                    <PrimaryButton
+                        type="button"
+                        :disabled="form.processing"
+                        @click="guardarDatosCredito"
+                    >
+                        Guardar cambios
+                    </PrimaryButton>
+                </div>
+            </section>
+
+            <!-- ========= RESUMEN / AMORTIZACIONES ========= -->
+            <section
+                class="bg-white shadow-sm rounded-2xl p-6 border border-slate-100"
+            >
+                <h2 class="text-lg font-semibold text-slate-800 mb-3">
+                    Resumen
+                </h2>
+                <dl class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <dt class="text-slate-500">Monto</dt>
+                        <dd class="font-medium">
+                            Q
+                            {{
+                                Number(credito.monto).toLocaleString('es-GT', {
+                                    minimumFractionDigits: 2,
+                                })
+                            }}
+                        </dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt class="text-slate-500">Plazo</dt>
+                        <dd class="font-medium">{{ credito.plazo }} mes(es)</dd>
+                    </div>
+                </dl>
+
+                <!-- Formulario para agregar amortización -->
+                <div class="mt-6 border-t border-slate-200 pt-4">
+                    <h3 class="text-sm font-semibold text-slate-700 mb-2">
+                        Agregar amortización
+                    </h3>
+                    <div class="space-y-2 text-sm">
+                        <div>
+                            <InputLabel for="fecha_pago" value="Fecha de pago" />
+                            <TextInput
+                                id="fecha_pago"
+                                v-model="amortForm.fecha_pago"
+                                type="date"
+                                class="mt-1 block w-full"
+                            />
+                            <p
+                                v-if="amortErrors.fecha_pago"
+                                class="mt-1 text-xs text-red-600"
+                            >
+                                {{ amortErrors.fecha_pago[0] }}
+                            </p>
+                        </div>
+                        <div>
+                            <InputLabel for="status" value="Estado" />
+                            <select
+                                id="status"
+                                v-model="amortForm.status"
+                                class="mt-1 block w-full rounded-lg border-slate-300 text-sm"
+                            >
+                                <option value="Pendiente">Pendiente</option>
+                                <option value="Pagado">Pagado</option>
+                            </select>
+                        </div>
+                        <div class="flex justify-end">
+                            <PrimaryButton type="button" @click="agregarAmortizacion">
+                                + Agregar amortización
+                            </PrimaryButton>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6">
+                    <h3 class="text-sm font-semibold text-slate-700 mb-2">
+                        Amortizaciones registradas
+                    </h3>
+                    <div
+                        v-if="amortizaciones.length"
+                        class="space-y-1 text-xs max-h-48 overflow-y-auto"
+                    >
+                        <div
+                            v-for="a in amortizaciones"
+                            :key="a.id"
+                            class="flex items-center justify-between rounded-lg border border-slate-100 px-2 py-1 gap-2"
+                        >
+                            <div class="flex flex-col">
+                                <span>{{ a.fecha_pago }}</span>
+                                <span
+                                    :class="
+                                        a.status === 'Pagado'
+                                            ? 'text-emerald-600'
+                                            : 'text-amber-600'
+                                    "
+                                >
+                                    {{ a.status }}
+                                </span>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    class="text-[11px] px-2 py-1 rounded-lg border border-slate-300 hover:bg-slate-50"
+                                    @click="toggleAmortizacionStatus(a)"
+                                >
+                                    Cambiar estado
+                                </button>
+
+                                <button
+                                    type="button"
+                                    class="text-[11px] px-2 py-1 rounded-lg border border-red-400 text-red-600 hover:bg-red-50"
+                                    @click="eliminarAmortizacion(a)"
+                                >
+                                    Eliminar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <p v-else class="text-xs text-slate-400">
+                        No hay amortizaciones registradas.
+                    </p>
+                </div>
+            </section>
+        </div>
+
+        <!-- ================= ETAPAS DEL CRÉDITO ================= -->
+        <section
+            class="bg-white shadow-sm rounded-2xl p-6 border border-slate-100"
+        >
+            <div
+                class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4"
+            >
+                <h2 class="text-lg font-semibold text-slate-800">
+                    Etapas del crédito
+                </h2>
+
+                <div class="flex flex-wrap items-center gap-2">
+                    <select
+                        v-model="nuevaEtapaId"
+                        class="rounded-lg border-slate-300 text-sm"
+                    >
+                        <option disabled value="">Seleccioná etapa</option>
+                        <option
+                            v-for="e in estadosDisponibles"
+                            :key="e.id"
+                            :value="e.id"
+                            :disabled="e.disabled"
+                        >
+                            {{ e.nombre }}
+                            <span v-if="e.disabled"> (no permitido)</span>
+                        </option>
+                    </select>
+
+                    <PrimaryButton
+                        type="button"
+                        class="whitespace-nowrap"
+                        :disabled="
+                            !nuevaEtapaId ||
+                            estadosDisponibles.find(
+                                (e) => e.id === nuevaEtapaId && e.disabled,
+                            )
+                        "
+                        @click="agregarEtapa"
+                    >
+                        + Agregar
+                    </PrimaryButton>
+                </div>
+            </div>
+
+            <!-- Timeline con fechas alineadas -->
+            <div v-if="timeline.length" class="pt-4">
+                <div class="relative">
+                    <!-- Línea base -->
+                    <div class="absolute top-3 left-0 right-0 h-0.5 bg-slate-200"></div>
+
+                    <div class="relative flex justify-between gap-4">
+                        <div
+                            v-for="(item, index) in timeline"
+                            :key="item.id"
+                            class="flex-1 flex flex-col items-center text-center"
+                        >
+                            <!-- Punto -->
+                            <div
+                                class="w-5 h-5 rounded-full border-2 border-slate-500 bg-white flex items-center justify-center z-10"
+                            >
+                                <div class="w-2 h-2 rounded-full bg-slate-500"></div>
+                            </div>
+
+                            <!-- Nombre + fecha alineados -->
+                            <div class="mt-2">
+                                <div class="text-sm font-medium text-slate-700">
+                                    {{ item.estado }}
+                                </div>
+                                <div class="text-xs text-slate-500">
+                                    {{ item.created_at }}
+                                </div>
+                            </div>
+
+                            <!-- Botón para revertir SOLO la última etapa -->
+                            <div v-if="index === timeline.length - 1" class="mt-2">
+                                <button
+                                    type="button"
+                                    class="text-xs text-red-600 hover:underline"
+                                    @click="revertirEtapa(item)"
+                                >
+                                    Revertir etapa
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <p v-else class="text-sm text-slate-400">
+                Aún no se han registrado etapas para este crédito.
+            </p>
+        </section>
     </div>
-  </div>
 </template>
-
-<style scoped>
-:deep(.p-card){ border-radius: .75rem }
-:deep(.p-dropdown .p-inputtext){ font-size: .95rem }
-:deep(.p-inputtext), :deep(.p-dropdown), :deep(.p-inputnumber), :deep(.p-calendar){ width:100% }
-:deep(.p-timeline-event-connector){ background:#e5e7eb }
-:deep(.p-timeline.p-timeline-horizontal .p-timeline-event-opposite){ margin-bottom:.25rem }
-:deep(.p-timeline.p-timeline-horizontal .p-timeline-event-content){ margin-top:.25rem }
-</style>

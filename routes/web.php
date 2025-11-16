@@ -92,7 +92,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/creditos/{id}',        [CreditoController::class, 'show'])->name('creditos.show');
 
     // Etapas (estados)
-    Route::post('/creditos/{id}/estado', [CreditoController::class, 'addEstado'])->name('creditos.estado.add');
+    Route::post('/creditos/{id}/estado',              [CreditoController::class, 'addEstado'])->name('creditos.estado.add');
+    Route::delete('/creditos/{id}/estado/{estadoId}', [CreditoController::class, 'removeEstado'])->name('creditos.estado.remove');
 
     // Amortizaciones
     Route::post('/creditos/{id}/amortizaciones', [CreditoController::class, 'storeAmortizacion'])->name('creditos.amortizaciones.store');
