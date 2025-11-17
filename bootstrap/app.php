@@ -11,16 +11,23 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // 💡 Dejamos el stack "web" como viene por defecto
+        // (incluye CSRF, sesiones, cookies, etc.)
+
+        // Middleware extra para Inertia + preload de assets
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
         ]);
+
+        // Alias de middlewares que usas en rutas
         $middleware->alias([
-            'module' => \App\Http\Middleware\CheckModuleAccess::class,
+            'module'             => \App\Http\Middleware\CheckModuleAccess::class,
             'no-asesor-clientes' => \App\Http\Middleware\ForbidAsesorOnClientes::class,
-            'admin' => \App\Http\Middleware\AdminOnly::class,
+            'admin'              => \App\Http\Middleware\AdminOnly::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
-    })->create();
+    })
+    ->create();

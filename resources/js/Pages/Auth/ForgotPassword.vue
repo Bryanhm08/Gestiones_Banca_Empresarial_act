@@ -1,36 +1,41 @@
 <script setup>
-import GuestLayout from '@/Layouts/GuestLayout.vue';
-import InputError from '@/Components/InputError.vue';
-import InputLabel from '@/Components/InputLabel.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
-import TextInput from '@/Components/TextInput.vue';
-import { Head, useForm } from '@inertiajs/vue3';
+import GuestLayout from '@/Layouts/GuestLayout.vue'
+import InputError from '@/Components/InputError.vue'
+import InputLabel from '@/Components/InputLabel.vue'
+import PrimaryButton from '@/Components/PrimaryButton.vue'
+import TextInput from '@/Components/TextInput.vue'
+import { Head, Link, useForm } from '@inertiajs/vue3'
 
 defineProps({
     status: {
         type: String,
     },
-});
+})
 
 const form = useForm({
     email: '',
-});
+})
 
 const submit = () => {
-    form.post(route('password.email'));
-};
+    form.post(route('password.email'), {
+        onFinish: () => {
+            // Opcional: si quieres limpiar el campo después
+            // form.reset('email')
+        },
+    })
+}
 </script>
 
 <template>
     <GuestLayout>
-        <Head title="Forgot Password" />
+        <Head title="Recuperar contraseña" />
 
         <div class="mb-4 text-sm text-gray-600">
-            Forgot your password? No problem. Just let us know your email
-            address and we will email you a password reset link that will allow
-            you to choose a new one.
+            ¿Olvidaste tu contraseña? No te preocupes. Ingresa el correo electrónico con el que
+            estás registrado y te enviaremos un enlace para que puedas crear una nueva contraseña.
         </div>
 
+        <!-- Mensaje de éxito -->
         <div
             v-if="status"
             class="mb-4 text-sm font-medium text-green-600"
@@ -40,7 +45,7 @@ const submit = () => {
 
         <form @submit.prevent="submit">
             <div>
-                <InputLabel for="email" value="Email" />
+                <InputLabel for="email" value="Correo electrónico" />
 
                 <TextInput
                     id="email"
@@ -55,12 +60,21 @@ const submit = () => {
                 <InputError class="mt-2" :message="form.errors.email" />
             </div>
 
-            <div class="mt-4 flex items-center justify-end">
+            <div class="mt-6 flex items-center justify-between">
+                <!-- Volver al login -->
+                <Link
+                    :href="route('login')"
+                    class="text-sm underline text-gray-600 hover:text-gray-900"
+                >
+                    Volver al inicio de sesión
+                </Link>
+
+                <!-- Enviar enlace -->
                 <PrimaryButton
                     :class="{ 'opacity-25': form.processing }"
                     :disabled="form.processing"
                 >
-                    Email Password Reset Link
+                    Enviar enlace de recuperación
                 </PrimaryButton>
             </div>
         </form>

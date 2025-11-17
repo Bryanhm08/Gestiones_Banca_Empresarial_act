@@ -54,8 +54,15 @@ class UserAdminController extends Controller
     public function store(StoreUserRequest $request)
     {
         $data = $request->validated();
-        $data['password'] = Hash::make($data['password']);
+
+        // Hashear contraseña
+        $data['password'] = Hash::make($data['password'] ?? '');
+
+        // Limpiar campos que no son columnas
+        unset($data['password_confirmation']);
+
         User::create($data);
+
         return back()->with('success', 'Usuario creado');
     }
 
@@ -63,13 +70,18 @@ class UserAdminController extends Controller
     {
         $data = $request->validated();
 
+        // Si el admin envía una nueva contraseña, se cambia; si no, se deja igual
         if (!empty($data['password'])) {
             $data['password'] = Hash::make($data['password']);
         } else {
             unset($data['password']);
         }
 
+        // Limpiar confirmación
+        unset($data['password_confirmation']);
+
         $user->update($data);
+
         return back()->with('success', 'Usuario actualizado');
     }
 
@@ -77,6 +89,7 @@ class UserAdminController extends Controller
     {
         $user->estado = !$user->estado;
         $user->save();
+
         return response()->json(['ok' => true, 'estado' => $user->estado]);
     }
 
@@ -91,6 +104,10 @@ class UserAdminController extends Controller
         $user->admin  = $request->boolean('admin');
         $user->save();
 
-        return response()->json(['ok' => true, 'asesor' => $user->asesor, 'admin' => $user->admin]);
+        return response()->json([
+            'ok'     => true,
+            'asesor' => $user->asesor,
+            'admin'  => $user->admin,
+        ]);
     }
 }

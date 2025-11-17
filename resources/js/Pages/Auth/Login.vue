@@ -42,7 +42,6 @@ const submit = () => {
 
 <template>
     <GuestLayout>
-
         <Head title="Log in" />
 
         <div class="min-h-screen grid grid-cols-1 lg:grid-cols-2">
@@ -86,7 +85,7 @@ const submit = () => {
                     </template>
 
                     <template #content>
-                        <!-- Mensaje de estado (ej. "Password reset sent") -->
+                        <!-- Mensaje de estado (ej. "Password reset sent" o "Password reset successful") -->
                         <Message v-if="status" severity="success" class="mb-4">
                             {{ status }}
                         </Message>
@@ -99,9 +98,17 @@ const submit = () => {
                                     <InputIcon>
                                         <Mail class="w-4 h-4" />
                                     </InputIcon>
-                                    <InputText id="email" v-model="form.email" type="email"
-                                        placeholder="tucorreo@dominio.com" class="w-full" :invalid="!!form.errors.email"
-                                        autocomplete="username" autofocus required />
+                                    <InputText
+                                        id="email"
+                                        v-model="form.email"
+                                        type="email"
+                                        placeholder="tucorreo@dominio.com"
+                                        class="w-full"
+                                        :invalid="!!form.errors.email"
+                                        autocomplete="username"
+                                        autofocus
+                                        required
+                                    />
                                 </IconField>
                                 <small v-if="form.errors.email" class="p-error">{{ form.errors.email }}</small>
                             </div>
@@ -109,11 +116,18 @@ const submit = () => {
                             <!-- Password -->
                             <div>
                                 <label for="password" class="block text-sm font-medium mb-1">Contraseña</label>
-                                <Password id="password" v-model="form.password" :feedback="false" toggleMask
-                                    class="w-full" inputClass="w-full"
-                                    :inputProps="{ autocomplete: 'current-password', required: true }" :pt="{
-                                        panel: { class: 'hidden' } // oculta panel de sugerencias
-                                    }">
+                                <Password
+                                    id="password"
+                                    v-model="form.password"
+                                    :feedback="false"
+                                    toggleMask
+                                    class="w-full"
+                                    inputClass="w-full"
+                                    :inputProps="{ autocomplete: 'current-password', required: true }"
+                                    :pt="{
+                                        panel: { class: 'hidden' }
+                                    }"
+                                >
                                     <template #header>
                                         <span class="text-sm">Ingresa tu contraseña</span>
                                     </template>
@@ -132,17 +146,26 @@ const submit = () => {
                                     <label for="remember" class="text-sm">Recordarme</label>
                                 </div>
 
-                                <Link v-if="canResetPassword" :href="route('password.request')"
-                                    class="text-sm underline hover:opacity-80">
-                                ¿Olvidaste tu contraseña?
+                                <Link
+                                    v-if="canResetPassword"
+                                    :href="route('password.request')"
+                                    class="text-sm underline hover:opacity-80"
+                                >
+                                    ¿Olvidaste tu contraseña?
                                 </Link>
                             </div>
 
                             <Divider class="my-2" />
 
                             <!-- Submit -->
-                            <Button type="submit" class="w-full" :disabled="form.processing || submitting"
-                                :loading="form.processing || submitting" label="Entrar" iconPos="right">
+                            <Button
+                                type="submit"
+                                class="w-full"
+                                :disabled="form.processing || submitting"
+                                :loading="form.processing || submitting"
+                                label="Entrar"
+                                iconPos="right"
+                            >
                                 <template #icon>
                                     <LogIn class="w-4 h-4" />
                                 </template>
@@ -156,7 +179,6 @@ const submit = () => {
 </template>
 
 <style scoped>
-/* Opcional: pulir el Card y transiciones */
 :deep(.p-card) {
     border-radius: 1rem;
 }
